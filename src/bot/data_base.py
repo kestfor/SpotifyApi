@@ -1,6 +1,6 @@
 import os
 import json
-from config_reader import config
+from src.config_reader import config
 from utils import generate_token
 from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

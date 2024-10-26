@@ -9,8 +9,8 @@ def generate_token(length) -> str:
 
 
 def update_admins(user_id, user_name):
-    with open("../data/admins.json", 'r', encoding="utf-8") as file:
+    with open("../../data/admins.json", 'r', encoding="utf-8") as file:
         before = json.load(file)
     before[str(user_id)] = user_name
-    with open('../data/admins.json', 'w', encoding="utf-8") as file:
+    with open('../../data/admins.json', 'w', encoding="utf-8") as file:
         file.write(json.dumps(before, indent=4, ensure_ascii=False))

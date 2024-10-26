@@ -1,5 +1,5 @@
 import asyncio
-from config_reader import config
+from src.config_reader import Settings
 from aiogram import Bot, Dispatcher
 from handlers import router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -10,7 +10,8 @@ import logging
 
 
 async def main():
-    token = config.bot_token.get_secret_value()
+    settings = Settings()
+    token = settings.bot_token.get_secret_value()
     bot = Bot(token=token)
     dp = Dispatcher()
     scheduler = AsyncIOScheduler()

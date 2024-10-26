@@ -3,7 +3,6 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-
     bot_token: SecretStr
     spotify_username: SecretStr
     spotify_client_id: SecretStr
@@ -12,9 +11,13 @@ class Settings(BaseSettings):
     data_path: SecretStr
     token_file: SecretStr
     admin_file: SecretStr
+    db_host: SecretStr
+    db_port: SecretStr
+    db_username: SecretStr
+    db_password: SecretStr
 
     class Config:
-        env_file = "../.env"
+        env_file = "../../.env"
         env_file_encoding = "utf-8"
 
 
