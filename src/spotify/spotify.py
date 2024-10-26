@@ -1,14 +1,14 @@
 import asyncio
 import time
 
-from asyncspotify.client import get_id
-from asyncspotify.oauth.response import AuthenticationResponse
-from config_reader import config
 import asyncspotify
 import asyncspotify.http
-import spotify_errors
-import lyrics
+from asyncspotify.client import get_id
 
+from src.spotify.spotify_errors import *
+from src.spotify.db_auth import DatabaseAuth
+from src.config_reader import config
+from src.lyrics.lyrics import Lyrics, LyricsFinder
 
 
 class AsyncSpotify:
@@ -32,7 +32,7 @@ class AsyncSpotify:
     class ModifiedClient(asyncspotify.client.Client):
 
         def __init__(self, auth):
-            self.auth: AsyncSpotify.ModifiedEasyAuthorizationCodeFlow = auth(self)
+            self.auth: DatabaseAuth = auth(self)
             self.http: AsyncSpotify.ModifiedHTTP = AsyncSpotify.ModifiedHTTP(self)
 
         async def authorize(self, url=None):
@@ -60,50 +60,50 @@ class AsyncSpotify:
         async def start_playlist(self, uri: str, device=None):
             await self.http.start_playlist(uri=uri, device_id=get_id(device))
 
-    class ModifiedEasyAuthorizationCodeFlow(asyncspotify.EasyAuthorizationCodeFlow):
-
-        def __init__(self, client_id, client_secret, scope, storage):
-            super().__init__(client_id=client_id, client_secret=client_secret, scope=scope, storage=storage)
-
-        async def authorize(self, url=None):
-            '''Authorize the client. Reads from the file specificed by `store`.'''
-
-            data = await self.load()
-
-            # no data found, run first time setup
-            # get response class, pass it to .store
-            if data is None:
-                if url is None:
-                    raise spotify_errors.AuthorizationError
-                data = await self.setup(url)
-
-                if isinstance(data, AuthenticationResponse):
-                    await self.store(data)
-
-            if not isinstance(data, AuthenticationResponse):
-                raise TypeError('setup() has to return an AuthenticationResponse')
-
-            self._data = data
-
-            # refresh it now if it's expired
-            if self._data.is_expired():
-                await self.refresh(start_task=True)
-            else:
-                # manually start refresh task if we didn't refresh on startup
-                self.refresh_in(self._data.seconds_until_expire())
-
-        def access_token(self):
-            return self._data.access_token
-
-        async def setup(self, url):
-
-            code_url = url
-
-            code = self.get_code_from_redirect(code_url)
-            d = self.create_token_data_from_code(code)
-
-            data = await self._token(d)
-            return self.response_class(data)
+    # class ModifiedEasyAuthorizationCodeFlow(asyncspotify.EasyAuthorizationCodeFlow):
+    #
+    #     def __init__(self, client_id, client_secret, scope, storage):
+    #         super().__init__(client_id=client_id, client_secret=client_secret, scope=scope, storage=storage)
+    #
+    #     async def authorize(self, url=None):
+    #         '''Authorize the client. Reads from the file specificed by `store`.'''
+    #
+    #         data = await self.load()
+    #
+    #         # no data found, run first time setup
+    #         # get response class, pass it to .store
+    #         if data is None:
+    #             if url is None:
+    #                 raise spotify_errors.AuthorizationError
+    #             data = await self.setup(url)
+    #
+    #             if isinstance(data, AuthenticationResponse):
+    #                 await self.store(data)
+    #
+    #         if not isinstance(data, AuthenticationResponse):
+    #             raise TypeError('setup() has to return an AuthenticationResponse')
+    #
+    #         self._data = data
+    #
+    #         # refresh it now if it's expired
+    #         if self._data.is_expired():
+    #             await self.refresh(start_task=True)
+    #         else:
+    #             # manually start refresh task if we didn't refresh on startup
+    #             self.refresh_in(self._data.seconds_until_expire())
+    #
+    #     def access_token(self):
+    #         return self._data.access_token
+    #
+    #     async def setup(self, url):
+    #
+    #         code_url = url
+    #
+    #         src = self.get_code_from_redirect(code_url)
+    #         d = self.create_token_data_from_code(src)
+    #
+    #         data = await self._token(d)
+    #         return self.response_class(data)
 
     _track_prefix = 'spotify%3Atrack%3A'
     _album_prefix = 'spotify:album:'
@@ -119,14 +119,13 @@ class AsyncSpotify:
         self._redirect_uri = config.spotify_redirect_uri.get_secret_value()
         self._scope = asyncspotify.Scope(user_modify_playback_state=True, user_read_playback_state=True)
         self._token_file = config.token_file.get_secret_value()
-        self._lyrics_finder = lyrics.LyricsFinder()
-        self._last_song_lyrics: lyrics.Lyrics = None
+        self._lyrics_finder = LyricsFinder()
+        self._last_song_lyrics: Lyrics | None = None
 
-        self._auth = AsyncSpotify.ModifiedEasyAuthorizationCodeFlow(
+        self._auth = DatabaseAuth(
             client_id=self._client_id,
             client_secret=self._client_secret,
             scope=self._scope,
-            storage=self._token_file,
         )
         self._auth.redirect_uri = self._redirect_uri
 
@@ -134,16 +133,16 @@ class AsyncSpotify:
         self._volume = 50
         self._saved_volume = self._volume
         self._playing: bool = False
-        self._cached_currently_playing: asyncspotify.CurrentlyPlaying = None
+        self._cached_currently_playing: asyncspotify.CurrentlyPlaying | None = None
         self._last_update_time = 0
         self._authorized = False
 
     async def create_authorize_route(self) -> str:
         return self._session.auth.create_authorize_route()
 
-    async def authorize(self, url=None):
+    async def authorize(self, storage_id=None):
         if not self._authorized:
-            await self._session.authorize(url)
+            await self._session.authorize(storage_id)
         try:
             player = await self._session.get_player()
             device = player.device
@@ -151,9 +150,10 @@ class AsyncSpotify:
             self._volume = device.volume_percent
             self._saved_volume = self._volume
             self._authorized = True
+        except Exception as e:
+            print(e)
         except asyncspotify.exceptions.NotFound:
-            raise spotify_errors.ConnectionError("there is no active device")
-
+            raise ConnectionError("there is no active device")
 
     async def is_active(self):
         try:
@@ -186,7 +186,7 @@ class AsyncSpotify:
         try:
             self._cached_currently_playing = await self._session.player_currently_playing()
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError
 
     async def update(self):
         now = time.time()
@@ -219,7 +219,7 @@ class AsyncSpotify:
             name = curr_track.name
             return [artists, name]
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError
 
     async def get_lyrics(self, func_waiter=None, **func_waiter_kwargs):
         artists, name = await self.get_curr_track()
@@ -247,18 +247,18 @@ class AsyncSpotify:
                 uri = self._track_prefix + uri
             await self._session.player_add_to_queue(uri)
         except asyncspotify.Forbidden:
-            raise spotify_errors.PremiumRequired
+            raise PremiumRequired
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError
 
     async def get_curr_user_queue(self) -> list[asyncspotify.SimpleTrack]:
         try:
             queue = await self._session.get_curr_user_queue()
             return queue
         except asyncspotify.Forbidden:
-            raise spotify_errors.PremiumRequired
+            raise PremiumRequired
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError
 
     async def get_formatted_curr_user_queue(self) -> list[str]:
         queue = await self.get_curr_user_queue()
@@ -273,9 +273,9 @@ class AsyncSpotify:
             self._playing = True
             await self.force_update()
         except asyncspotify.Forbidden:
-            raise spotify_errors.PremiumRequired
+            raise PremiumRequired
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError
 
     async def previous_track(self):
         try:
@@ -283,9 +283,9 @@ class AsyncSpotify:
             self._playing = True
             await self.force_update()
         except asyncspotify.Forbidden:
-            raise spotify_errors.PremiumRequired
+            raise PremiumRequired
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError
 
     async def start_pause(self):
         try:
@@ -297,9 +297,9 @@ class AsyncSpotify:
                 self._playing = True
                 await self._session.player_play()
         except asyncspotify.Forbidden:
-            raise spotify_errors.PremiumRequired
+            raise PremiumRequired
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError
 
     async def increase_volume(self):
         try:
@@ -329,7 +329,7 @@ class AsyncSpotify:
         except:
             raise ConnectionError
 
-    async def mute_unmute(self): 
+    async def mute_unmute(self):
         old_values = [self._volume, self._saved_volume]
         try:
             if self._volume == 0:
@@ -340,7 +340,7 @@ class AsyncSpotify:
             await self._session.player_volume(self._volume)
         except asyncspotify.Forbidden:
             self._volume, self._saved_volume = old_values
-            raise spotify_errors.Forbidden
+            raise Forbidden
 
     @property
     def volume(self):
@@ -358,4 +358,4 @@ class AsyncSpotify:
         try:
             return await self.__get_info(await self._session.search("track", q=request, limit=10))
         except:
-            raise spotify_errors.ConnectionError
+            raise ConnectionError

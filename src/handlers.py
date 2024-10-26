@@ -1,22 +1,23 @@
 import asyncio
 import os
 import random
-from aiogram.dispatcher.router import Router
+
+import qrcode
 from aiogram import F, Bot
-from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
+from aiogram.dispatcher.router import Router
+from aiogram.filters import CommandObject
+from aiogram.filters.callback_data import CallbackData
 from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, FSInputFile
-from aiogram.filters.callback_data import CallbackData
-from asyncspotify import BadRequest
+from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
-from spotify_errors import PremiumRequired, ConnectionError, AuthorizationError, Forbidden
-from spotify import AsyncSpotify
 from data_base import db
 from filters import EmptyDataBaseFilter, UrlFilter
-from aiogram.filters import CommandObject
+from src.spotify.spotify import AsyncSpotify
+from src.spotify.spotify import PremiumRequired, ConnectionError, AuthorizationError, Forbidden
+from start_arg import StartArg
 from states import SetTokenState, SetSpotifyUrl
-import qrcode
 
 router = Router()
 spotify: AsyncSpotify
@@ -267,7 +268,7 @@ async def view_queue(callback: CallbackQuery):
 @router.callback_query(F.data == 'view_url')
 async def view_url(callback: CallbackQuery):
     if db.is_active():
-        url = f"t.me/SpotifyShareControlBot?start={db.token}"
+        url = f"t.me/SpotifyShareControlBot?start=_token_{db.token}"
         builder = InlineKeyboardBuilder()
         builder.row(InlineKeyboardButton(text="назад", callback_data="get_settings"))
         msg = await callback.message.edit_text(text=url, reply_markup=builder.as_markup())
@@ -518,15 +519,22 @@ async def start_by_command(message: Message, command: CommandObject, bot: Bot):
     await asyncio.sleep(0.2)
     user_id = message.from_user.id
     await asyncio.sleep(0.3)
-    if user_id in db.admins:
-        await admin_start(message)
-    else:
-        token = command.args
-        if token is None or token == '':
-            await user_start(message)
-        else:
-            db.update_last_message(user_id, message)
-            await authorize(token, user_id, message.from_user.username, bot)
+    start_arg = StartArg(command.args)
+    match start_arg.type:
+        case StartArg.Type.TOKEN | StartArg.Type.EMPTY:
+            token = start_arg.value
+            if token is None or token == '':
+                if user_id in db.admins:
+                    await admin_start(message)
+                else:
+                    await user_start(message)
+            else:
+                db.update_last_message(user_id, message)
+                await authorize(token, user_id, message.from_user.username, bot)
+        case StartArg.Type.AUTH:
+            await spotify.authorize(start_arg.value)
+            db.set_token()
+            await admin_start(message)
     await message.delete()
 
 
@@ -558,9 +566,8 @@ async def start_session(callback: CallbackQuery, bot: Bot, state: FSMContext):
         spotify = AsyncSpotify()
         await spotify.authorize()
     except AuthorizationError:
-        msg = await callback.message.edit_text(f"Необходима инициализация\n"
-                                               f"Перейдите по ссылке: {await spotify.create_authorize_route()}\n"
-                                               f"Отправьте ссылку, на которую вы были перенаправлены")
+        msg = await callback.message.edit_text(
+            f"Перейдите по ссылке для авторизации: {await spotify.create_authorize_route()}\n")
         db.update_last_message(callback.from_user.id, msg)
         await state.set_state(SetSpotifyUrl.set_url)
         return

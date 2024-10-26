@@ -6,7 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from data_base import db
 import logging
 
-logging.basicConfig(level=logging.WARNING, filename='../bot_log.log', filemode='w')
+# logging.basicConfig(level=logging.WARNING, filename='../bot_log.log', filemode='w')
 
 
 async def main():

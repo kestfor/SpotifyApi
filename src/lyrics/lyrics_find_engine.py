@@ -22,7 +22,7 @@ class Genius(lyricsgenius.Genius):
             replace_default_terms (:obj:`list`, optional): if True, replaces default
                 excluded terms with user's. Default excluded terms are listed below.
             retries (:obj:`int`, optional): Number of retries in case of timeouts and
-                errors with a >= 500 response code. By default, requests are only made once.
+                errors with a >= 500 response src. By default, requests are only made once.
 
         Attributes:
             verbose (:obj:`bool`, optional): Turn printed messages on or off.
@@ -35,7 +35,7 @@ class Genius(lyricsgenius.Genius):
             replace_default_terms (:obj:`list`, optional): if True, replaces default
                 excluded terms with user's.
             retries (:obj:`int`, optional): Number of retries in case of timeouts and
-                errors with a >= 500 response code. By default, requests are only made once.
+                errors with a >= 500 response src. By default, requests are only made once.
 
         Returns:
             :class:`Genius`

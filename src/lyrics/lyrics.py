@@ -1,7 +1,7 @@
 import asyncio
 import threading
 
-import lyrics_find_engine
+import src.lyrics.lyrics_find_engine as lyrics_find_engine
 
 
 class Lyrics:
