@@ -1,7 +1,7 @@
 import os
 import json
 from src.config_reader import config
-from utils import generate_token
+from src.bot.utils.utils import generate_token
 from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -13,8 +13,8 @@ class DataBase:
     __AMOUNT_TO_ADD_TO_QUEUE = 5
     __FULL_UPDATE_TIMEOUT_SECONDS = 20
 
-    def __init__(self):
-        self._DATA_PATH = config.data_path.get_secret_value()
+    def __init__(self, path):
+        self._DATA_PATH = path
         if not os.path.exists(self._DATA_PATH):
             os.system(f"mkdir {self._DATA_PATH}")
         self._admins_file_name = config.admin_file.get_secret_value()
@@ -26,7 +26,7 @@ class DataBase:
         self._users = self._admins.copy()
         self._last_request = {}
         self._last_message_from_bot = {}
-        self._scheduler: AsyncIOScheduler = None
+        self._scheduler: AsyncIOScheduler | None = None
         self._users_queue = []
         self._scheduler_jobs = {}
 
@@ -167,4 +167,4 @@ class DataBase:
         return self._last_request.copy()
 
 
-db = DataBase()
+db = DataBase(config.data_path)

@@ -28,8 +28,6 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
         "client_secret": CLIENT_SECRET,
     }
 
-    print(body)
-
     async with ClientSession() as client_session:
         response = await client_session.post("https://accounts.spotify.com/api/token", data=body)
 

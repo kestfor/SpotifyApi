@@ -5,10 +5,10 @@ import asyncspotify
 import asyncspotify.http
 from asyncspotify.client import get_id
 
-from src.spotify.spotify_errors import *
-from src.spotify.db_auth import DatabaseAuth
 from src.config_reader import config
 from src.lyrics.lyrics import Lyrics, LyricsFinder
+from src.spotify.db_auth import DatabaseAuth
+from src.spotify.spotify_errors import *
 
 
 class AsyncSpotify:
@@ -254,6 +254,9 @@ class AsyncSpotify:
     async def get_curr_user_queue(self) -> list[asyncspotify.SimpleTrack]:
         try:
             queue = await self._session.get_curr_user_queue()
+
+            #await self.synchronize_queue()
+
             return queue
         except asyncspotify.Forbidden:
             raise PremiumRequired
@@ -328,6 +331,11 @@ class AsyncSpotify:
             await self._session.player_volume(self._volume)
         except:
             raise ConnectionError
+
+    # TODO implement
+    async def synchronize_queue(self):
+        """shift queue top to current song"""
+        raise NotImplementedError('synchronize_queue')
 
     async def mute_unmute(self):
         old_values = [self._volume, self._saved_volume]

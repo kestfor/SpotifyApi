@@ -1,16 +1,12 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import BigInteger, String, DateTime
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 
+from src.sql.models.base import Base
 
-class Base(DeclarativeBase):
-    pass
-
-
-class User(Base):
-    __tablename__ = 'user'
-
-    user_id = mapped_column(BigInteger, primary_key=True)
+if TYPE_CHECKING:
+    from src.session.user import User
 
 
 class Auth(Base):
@@ -24,6 +20,8 @@ class Auth(Base):
     expires_in = mapped_column(DateTime)
     expires_at = mapped_column(DateTime)
     scope = mapped_column(String(255))
+
+    user: Mapped['User'] = relationship(back_populates="auth", lazy='joined')
 
     def as_dict(self):
         tmp = {c.name: getattr(self, c.name) for c in self.__table__.columns}

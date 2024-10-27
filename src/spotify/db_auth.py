@@ -16,20 +16,6 @@ class DatabaseAuth(AuthorizationCodeFlow):
 
     async def authorize(self, storage_id=None):
         data = await self.load(storage_id)
-
-        # # no data found, run first time setup
-        # # get response class, pass it to .store
-        # if data is None:
-        #     if storage_id is None:
-        #         raise spotify_errors.AuthorizationError
-        #     data = await self.setup(storage_id)
-        #
-        #     if isinstance(data, AuthenticationResponse):
-        #         await self.store(data)
-        #
-        # if not isinstance(data, AuthenticationResponse):
-        #     raise TypeError('setup() has to return an AuthenticationResponse')
-
         self._data = data
 
         # refresh it now if it's expired
