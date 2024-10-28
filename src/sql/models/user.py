@@ -1,5 +1,5 @@
 import logging
-from typing import Union, Optional
+from typing import Optional
 
 from sqlalchemy import BigInteger, ForeignKey, String
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,10 +13,12 @@ from src.sql.models.session import Session
 class User(Base):
     __tablename__ = 'user'
 
+    __repr_attrs__ = ["user_id", "username", "auth_id", "session_id"]
+
     user_id = mapped_column(BigInteger, primary_key=True)
     username = mapped_column(String(255))
     auth_id = mapped_column(ForeignKey('auth.id'), nullable=True)
-    session_id = mapped_column(ForeignKey("session.id"), nullable=True)
+    session_id = mapped_column(ForeignKey("session.id", ondelete="SET NULL"), nullable=True)
 
     auth: Mapped[Auth] = relationship(back_populates="user", lazy='joined')
     session: Mapped[Session] = relationship(back_populates="user", lazy='joined')
@@ -44,6 +46,15 @@ class User(Base):
         else:
             logging.warning(f"User {self.user_id} has no session {session_id}")
 
+    async def create_session(self, session: AsyncSession, token: str) -> Session:
+        music_session = await session.get(Session, token)
+        if music_session is None:
+            music_session = Session(id=self.user_id, token=token)
+            session.add(music_session)
+            await session.flush()
+        self.session = music_session
+        return self.session
+
     @property
     def authorized(self) -> bool:
         return self.auth is not None
@@ -55,6 +66,10 @@ class User(Base):
     @property
     def is_admin(self) -> bool:
         return self.session_id == self.user_id
+
+    @property
+    def token(self) -> str:
+        return str(self.user_id)
 
     async def get_admin(self, session: AsyncSession) -> Optional['User']:
         if self.is_admin:

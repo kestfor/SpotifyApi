@@ -8,7 +8,8 @@ from fastapi import Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.sql.engine import get_session
-from src.sql.tables import Auth
+from src.sql.models.auth import Auth
+from src.sql.models.user import User
 
 app = fastapi.FastAPI()
 

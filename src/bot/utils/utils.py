@@ -96,8 +96,3 @@ async def get_curr_song_info(lyrics):
     name = name[:name.find('(')] if '(' in name else name
     name = name.strip()
     return '🔥 ' + artist + ' ' + name + ' 🔥\n\n'
-
-
-async def del_message(msg: Message):
-    await asyncio.sleep(5)
-    await msg.delete()

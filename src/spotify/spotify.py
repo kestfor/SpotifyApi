@@ -137,6 +137,10 @@ class AsyncSpotify:
         self._last_update_time = 0
         self._authorized = False
 
+    @property
+    def authorized(self) -> bool:
+        return self._authorized
+
     async def create_authorize_route(self) -> str:
         return self._session.auth.create_authorize_route()
 

@@ -1,3 +1,5 @@
+import logging
+import time
 from typing import Callable, Dict, Any, Awaitable
 
 from aiogram import BaseMiddleware, types
@@ -15,11 +17,12 @@ class UserMiddleware(BaseMiddleware):
             data: Dict[str, Any],
     ) -> Any:
         from_user = None
-        if isinstance(event, types.Message | types.CallbackQuery | types.InlineQuery):
+        if isinstance(event, types.Message | types.CallbackQuery | types.InlineQuery | types.BotCommand):
             from_user = event.from_user
         if from_user:
             session = data.get("session")
             if session is None:
+                logging.warning("new session creation")
                 async with get_session() as session:
                     user = await User.get_or_create(
                         session=session,

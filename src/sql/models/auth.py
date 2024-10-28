@@ -5,8 +5,7 @@ from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from src.sql.models.base import Base
 
-if TYPE_CHECKING:
-    from src.session.user import User
+from src.session.user import User
 
 
 class Auth(Base):
@@ -21,7 +20,7 @@ class Auth(Base):
     expires_at = mapped_column(DateTime)
     scope = mapped_column(String(255))
 
-    user: Mapped['User'] = relationship(back_populates="auth", lazy='joined')
+    user: Mapped['User'] = relationship("User", back_populates="auth", lazy='joined')
 
     def as_dict(self):
         tmp = {c.name: getattr(self, c.name) for c in self.__table__.columns}

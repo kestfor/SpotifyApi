@@ -4,7 +4,7 @@ from sqlalchemy.dialects.mysql import insert
 
 from src.spotify.spotify_errors import *
 from src.sql.engine import async_session
-from src.sql.tables import Auth
+from src.sql.models.auth import Auth
 
 
 class DatabaseAuth(AuthorizationCodeFlow):
