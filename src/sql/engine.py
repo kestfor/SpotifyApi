@@ -12,7 +12,7 @@ DATABASE = {
     'database': 'share_music'
 }
 
-engine = create_async_engine(URL.create(**DATABASE), isolation_level="SERIALIZABLE")
+engine = create_async_engine(URL.create(**DATABASE))
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 

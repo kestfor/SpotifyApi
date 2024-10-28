@@ -42,8 +42,7 @@ class AsyncSpotify:
                     res = await function(*args, **kwargs)
                 except asyncspotify.Forbidden:
                     raise PremiumRequired
-                except Exception as e:
-                    print(e)
+                except Exception:
                     raise ConnectionError
                 return res
 
@@ -135,12 +134,11 @@ class AsyncSpotify:
         self._closed = True
         self._authorized = False
 
+    @error_wrapper()
     async def force_update(self):
-        try:
-            self._cached_currently_playing = await self._session.player_currently_playing()
-        except:
-            raise ConnectionError
+        self._cached_currently_playing = await self._session.player_currently_playing()
 
+    @error_wrapper()
     async def update(self):
         now = time.time()
         if (now - self._last_update_time) >= self._update_timeout:
@@ -158,6 +156,7 @@ class AsyncSpotify:
         name = curr_track.name
         return artists, name
 
+    @error_wrapper()
     async def get_lyrics(self, func_waiter=None, **func_waiter_kwargs):
         artists, name = await self.get_curr_track()
         main_author = artists[0]

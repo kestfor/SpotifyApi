@@ -50,12 +50,15 @@ class DatabaseAuth(AuthorizationCodeFlow):
 
     async def store(self, response):
         """simply store the response to db"""
-        async with async_session() as session, session.begin():
-            data = response.to_dict()
-            data["id"] = self._storage_id
-            insert_stmt = insert(Auth).values(**data)
-            on_dupl_stmt = insert_stmt.on_duplicate_key_update(insert_stmt.inserted)
-            await session.execute(on_dupl_stmt)
+        try:
+            async with async_session() as session:
+                data = response.to_dict()
+                data["id"] = self._storage_id
+                insert_stmt = insert(Auth).values(**data)
+                on_dupl_stmt = insert_stmt.on_duplicate_key_update(insert_stmt.inserted)
+                await session.execute(on_dupl_stmt)
+        except Exception as e:
+            print(e)
 
     def access_token(self):
         return self._data.access_token

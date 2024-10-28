@@ -10,14 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.bot.callbacks_factory.factories import GetNextLyrics, AddAdminFactory, ChangeDeviceFactory, \
     AddSongCallbackFactory
 from src.bot.filters import UrlFilter
-from src.bot.handlers.error_handlers.handlers import handle_connection_error, handle_premium_required_error, \
-    error_wrapper
+from src.bot.handlers.error_handlers.handlers import handle_connection_error, error_wrapper
 from src.bot.spotify_sessions import spotify_sessions
 from src.bot.utils.keyboards import get_menu_keyboard, get_admin_menu_keyboard, get_user_menu_keyboard, \
     get_settings_keyboard
 from src.bot.utils.utils import get_menu_text, get_queue_text, get_curr_song_info, get_lyrics_switcher
 from src.spotify.spotify import AsyncSpotify
-from src.spotify.spotify import PremiumRequired, ConnectionError
+from src.spotify.spotify import ConnectionError
 from src.sql.models.user import User
 
 router = Router()
@@ -40,19 +39,14 @@ async def menu(callback: CallbackQuery, spotify: AsyncSpotify, user: User, sessi
 
 async def refresh(callback: CallbackQuery, spotify: AsyncSpotify, user: User, session: AsyncSession):
     old_text = callback.message.text
-    try:
-        await spotify.update()
-        curr_text = await get_menu_text(spotify, user.session, session)
-    except ConnectionError:
-        await handle_connection_error(callback, user)
-        return
+    await spotify.update()
+    curr_text = await get_menu_text(spotify, user.session, session)
     if old_text != curr_text:
         await menu(callback, spotify, user, session)
-    else:
-        return
 
 
 @router.callback_query(F.data == 'view_queue')
+@error_wrapper()
 async def view_queue(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
     queue = await get_queue_text(spotify)
@@ -127,6 +121,7 @@ async def add_admin(callback: CallbackQuery, callback_data: AddAdminFactory, bot
 
 
 @router.callback_query(F.data == "refresh")
+@error_wrapper()
 async def refresh_callback(callback: CallbackQuery, session: AsyncSession, user: User):
     spotify = await spotify_sessions.get_or_create(user, session)
     await refresh(callback, spotify, user, session)
@@ -149,6 +144,7 @@ async def chose_url_role(message: Message, state: FSMContext, user: User, sessio
     await start_playlist(message, user, session)
 
 
+@error_wrapper()
 async def start_playlist(message: Message, user: User, session):
     spotify = await spotify_sessions.get_or_create(user, session)
     try:
@@ -157,16 +153,13 @@ async def start_playlist(message: Message, user: User, session):
         await message.answer(
             "неверная ссылка, необходима ссылка на spotify контент в виде автора, плейлиста или альбома",
             reply_markup=get_menu_keyboard())
-    except ConnectionError:
-        await handle_connection_error(message, user)
-    except PremiumRequired:
-        await handle_premium_required_error(message)
     else:
         await message.answer("плейлист успешно запущен", reply_markup=get_menu_keyboard())
     await message.delete()
 
 
 @router.callback_query(F.data == "view_devices")
+@error_wrapper()
 async def view_devices(callback: CallbackQuery, user: User, session):
     keyboard = InlineKeyboardBuilder()
     spotify = await spotify_sessions.get_or_create(user, session)
@@ -181,6 +174,7 @@ async def view_devices(callback: CallbackQuery, user: User, session):
 
 
 @router.callback_query(ChangeDeviceFactory.filter())
+@error_wrapper()
 async def transfer_playback(callback: CallbackQuery, callback_data: ChangeDeviceFactory, user: User, session):
     device_id = callback_data.id
     is_active = callback_data.is_active
@@ -191,8 +185,6 @@ async def transfer_playback(callback: CallbackQuery, callback_data: ChangeDevice
         return
     try:
         await spotify.transfer_player(device_id)
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
     except ConnectionError:
         await callback.message.edit_text("не удалось изменить устройство", reply_markup=get_menu_keyboard())
     else:
@@ -245,30 +237,21 @@ async def search_track_callback(callback: CallbackQuery):
 
 
 @router.message(F.text)
+@error_wrapper()
 async def search_track_handler(message: Message, user: User, session: AsyncSession):
-    if user.in_session:
-        spotify = await spotify_sessions.get_or_create(user, session)
-        try:
-            list_of_results = await spotify.search(message.text)
-        except ConnectionError:
-            await handle_connection_error(message, user)
-            return
-        keyboard = InlineKeyboardBuilder()
-        request = {}
-        for item in list_of_results:
-            song_info = ' - '.join(item[0:2])
-            raw_uri = item[-1]
-            request[raw_uri] = song_info
-            keyboard.button(text=song_info, callback_data=AddSongCallbackFactory(uri=raw_uri))
-        keyboard.adjust(1)
-        keyboard.row(InlineKeyboardButton(text='назад', callback_data='menu'))
-        await message.answer("выберите результат поиска 😊", reply_markup=keyboard.as_markup())
-        await message.delete()
-    else:
-        builder = InlineKeyboardBuilder()
-        builder.row(InlineKeyboardButton(text='ввести токен', callback_data="set_token"))
-        await message.answer(text='необходимо подключиться к сессии ⌨️', reply_markup=builder.as_markup())
-        await message.delete()
+    spotify = await spotify_sessions.get_or_create(user, session)
+    list_of_results = await spotify.search(message.text)
+    keyboard = InlineKeyboardBuilder()
+    request = {}
+    for item in list_of_results:
+        song_info = ' - '.join(item[0:2])
+        raw_uri = item[-1]
+        request[raw_uri] = song_info
+        keyboard.button(text=song_info, callback_data=AddSongCallbackFactory(uri=raw_uri))
+    keyboard.adjust(1)
+    keyboard.row(InlineKeyboardButton(text='назад', callback_data='menu'))
+    await message.answer("выберите результат поиска 😊", reply_markup=keyboard.as_markup())
+    await message.delete()
 
 
 @router.callback_query(AddSongCallbackFactory.filter())
@@ -281,49 +264,37 @@ async def add_song_to_queue(callback: CallbackQuery, callback_data: AddSongCallb
 
 
 @router.callback_query(F.data == 'start_pause')
+@error_wrapper()
 async def start_pause_track(callback: CallbackQuery, bot: Bot, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
     try:
         await spotify.start_pause()
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
-        return
     except ConnectionError:
         pass
     await menu(callback, spotify, user, session)
 
 
 @router.callback_query(F.data == 'next_track')
+@error_wrapper()
 async def next_track(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    try:
-        old_track = await spotify.get_curr_track()
-        await spotify.next_track()
-        while old_track == await spotify.get_curr_track():
-            await asyncio.sleep(0.5)
-            await spotify.force_update()
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
-        return
-    except ConnectionError:
-        pass
+    old_track = await spotify.get_curr_track()
+    await spotify.next_track()
+    while old_track == await spotify.get_curr_track():
+        await asyncio.sleep(0.5)
+        await spotify.force_update()
     await menu(callback, spotify, user, session)
 
 
 @router.callback_query(F.data == 'previous_track')
+@error_wrapper()
 async def previous_track(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    try:
-        old_track = await spotify.get_curr_track()
-        await spotify.previous_track()
-        while old_track == await spotify.get_curr_track():
-            await asyncio.sleep(0.5)
-            await spotify.force_update()
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
-        return
-    except ConnectionError:
-        pass
+    old_track = await spotify.get_curr_track()
+    await spotify.previous_track()
+    while old_track == await spotify.get_curr_track():
+        await asyncio.sleep(0.5)
+        await spotify.force_update()
     await menu(callback, spotify, user, session)
 
 
@@ -350,41 +321,26 @@ async def end_session(callback: CallbackQuery, user: User, session: AsyncSession
 
 
 @router.callback_query(F.data == 'increase_volume')
+@error_wrapper()
 async def increase_volume(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    try:
-        await spotify.increase_volume()
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
-        return
-    except ConnectionError:
-        pass
+    await spotify.increase_volume()
     await menu(callback, spotify, user, session)
 
 
 @router.callback_query(F.data == 'decrease_volume')
+@error_wrapper()
 async def decrease_volume(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    try:
-        await spotify.decrease_volume()
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
-        return
-    except ConnectionError:
-        pass
+    await spotify.decrease_volume()
     await menu(callback, spotify, user, session)
 
 
 @router.callback_query(F.data == 'mute_volume')
+@error_wrapper()
 async def mute_volume(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    try:
-        await spotify.increase_volume()
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
-        return
-    except ConnectionError:
-        pass
+    await spotify.increase_volume()
     await menu(callback, spotify, user, session)
 
 

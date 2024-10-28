@@ -4,7 +4,7 @@ from aiogram import Bot
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from src.spotify.spotify_errors import PremiumRequired
+from src.spotify.spotify_errors import PremiumRequired, ConnectionError
 from src.sql.models.user import User
 
 
