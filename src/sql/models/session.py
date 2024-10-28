@@ -2,9 +2,10 @@ from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import BigInteger, String, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import mapped_column, Mapped, relationship, MappedColumn
+from sqlalchemy.orm import mapped_column, Mapped, relationship
 
 from src.sql.models.base import Base
+import src.sql.models.user as user_model
 
 if TYPE_CHECKING:
     from src.sql.models.user import User
@@ -25,3 +26,11 @@ class Session(Base):
     @classmethod
     async def get_by_id(cls, session: AsyncSession, session_id: int) -> Optional['Session']:
         return await session.get(cls, session_id)
+
+    async def get_users(self, session: AsyncSession) -> list['User']:
+        stmt = select(user_model.User).where(user_model.User.session_id == self.id)
+        return (await session.execute(stmt)).scalars()
+
+    async def delete(self, session: AsyncSession) -> None:
+        await session.delete(self)
+        await session.flush()

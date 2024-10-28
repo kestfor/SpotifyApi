@@ -18,9 +18,15 @@ class SpotifySessions:
 
         auth_id = master.auth_id
         spotify = self._sessions[master.user_id]
-        if not spotify.authorized:
+        if not spotify.authorized and auth_id is not None:
             await spotify.authorize(storage_id=auth_id)
         return spotify
+
+    async def clear_spotify(self, user_id):
+
+        spotify = self._sessions.pop(user_id, None)
+        if spotify is not None and not spotify.closed:
+            await spotify.close()
 
 
 spotify_sessions = SpotifySessions()

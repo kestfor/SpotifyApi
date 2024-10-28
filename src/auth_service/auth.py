@@ -36,7 +36,7 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
             print("Authorization src received")
             data = await response.json()
             print(data)
-            created_at = datetime.datetime.now()
+            created_at = datetime.datetime.now(datetime.timezone.utc)
 
             data['created_at'] = created_at
             data["expires_at"] = created_at + datetime.timedelta(seconds=data["expires_in"])

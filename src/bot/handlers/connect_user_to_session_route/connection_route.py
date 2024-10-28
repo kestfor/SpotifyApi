@@ -23,7 +23,14 @@ async def set_user_token(callback: CallbackQuery, state: FSMContext):
 async def add_user_to_session_handler(message: Message, state: FSMContext, user: User, session: AsyncSession,
                                       token=None):
     token = message.text if token is None else token
-    music_session = await Session.get_by_id(session, int(token))
+    try:
+        token = int(token)
+    except:
+        await message.answer(text='введен неверный токен или сессия не начата')
+        await message.delete()
+        return
+
+    music_session = await Session.get_by_id(session, token)
     if music_session:
         await user.add_to_session(session, music_session.id)
         spotify = await spotify_sessions.get_or_create(user, session)

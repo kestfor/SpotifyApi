@@ -46,6 +46,10 @@ class User(Base):
         else:
             logging.warning(f"User {self.user_id} has no session {session_id}")
 
+    async def leave_session(self, session: AsyncSession):
+        self.session_id = None
+        await session.flush()
+
     async def create_session(self, session: AsyncSession, token: str) -> Session:
         music_session = await session.get(Session, token)
         if music_session is None:

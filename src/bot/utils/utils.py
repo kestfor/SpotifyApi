@@ -7,6 +7,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.callbacks_factory.factories import GetNextLyrics
+from src.spotify.TrackInQueue import TrackWithUser
 from src.spotify.spotify import AsyncSpotify
 from src.sql.models.session import Session
 
@@ -65,17 +66,17 @@ async def get_menu_text(spotify: AsyncSpotify, session: Session, sql_session: As
 
 # TODO добавить возможность видеть кто поставил трек
 async def get_queue_text(spotify: AsyncSpotify):
-    queue = await spotify.get_curr_user_queue()
-    queue = queue[0:min(len(queue), 10)]
+    queue: list[TrackWithUser] = await spotify.get_curr_user_queue()
+    max_items_num = 10
     if len(queue) == 0:
         return None
     else:
+        queue = queue[0:max_items_num]
         text = ""
-        # ids = [item[1] for item in queue]
         for item in queue:
-            # author = '' if item.id not in ids else (' - поставил(а) @' + db.users[db.user_queue[ids.index(item.id)][0]])
-            author = ""
-            text += (item.name[:item.name.find('(')] if '(' in item.name else item.name) + author + '\n\n'
+            author = ' - поставил(а) @' + item.username
+            text += (item.track.name[
+                     :item.track.name.find('(')] if '(' in item.track.name else item.track.name) + author + '\n\n'
         return text
 
 

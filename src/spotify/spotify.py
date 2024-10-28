@@ -1,110 +1,20 @@
 import asyncio
+import functools
 import time
+from math import trunc
 
 import asyncspotify
 import asyncspotify.http
-from asyncspotify.client import get_id
 
 from src.config_reader import config
 from src.lyrics.lyrics import Lyrics, LyricsFinder
+from src.spotify.TrackInQueue import TrackInQueue, TrackWithUser
 from src.spotify.db_auth import DatabaseAuth
+from src.spotify.modified_client import ModifiedClient
 from src.spotify.spotify_errors import *
 
 
 class AsyncSpotify:
-    class ModifiedHTTP(asyncspotify.http.HTTP):
-        async def player_add_to_queue(self, uri: str, device_id):
-            r = asyncspotify.Route('POST', f'me/player/queue?uri={uri}', device=device_id)
-            await self.request(r)
-
-        async def transfer_playback(self, device_id):
-            r = asyncspotify.Route("PUT", "me/player")
-            await self.request(r, json={"device_ids": [device_id]})
-
-        async def start_playlist(self, uri, device_id):
-            r = asyncspotify.Route("PUT", "me/player/play", device_id=device_id)
-            await self.request(r, json={"context_uri": uri})
-
-        async def get_curr_user_queue(self, device_id):
-            r = asyncspotify.Route("GET", 'me/player/queue')
-            return await self.request(r)
-
-    class ModifiedClient(asyncspotify.client.Client):
-
-        def __init__(self, auth):
-            self.auth: DatabaseAuth = auth(self)
-            self.http: AsyncSpotify.ModifiedHTTP = AsyncSpotify.ModifiedHTTP(self)
-
-        async def authorize(self, url=None):
-            await self.auth.authorize(url)
-
-        async def player_add_to_queue(self, uri: str, device=None):
-            await self.http.player_add_to_queue(uri, device_id=get_id(device))
-
-        async def transfer_playback(self, device):
-            await self.http.transfer_playback(device_id=get_id(device))
-
-        async def get_player(self, **kwargs) -> asyncspotify.CurrentlyPlayingContext | None:
-            data = await self.http.get_player(**kwargs)
-
-            if data is not None:
-                return asyncspotify.CurrentlyPlayingContext(self, data)
-
-        async def get_curr_user_queue(self, device=None):
-            data = await self.http.get_curr_user_queue(device_id=get_id(device))
-            tracks = []
-            for track_obj in data['queue']:
-                tracks.append(asyncspotify.SimpleTrack(self, track_obj))
-            return tracks
-
-        async def start_playlist(self, uri: str, device=None):
-            await self.http.start_playlist(uri=uri, device_id=get_id(device))
-
-    # class ModifiedEasyAuthorizationCodeFlow(asyncspotify.EasyAuthorizationCodeFlow):
-    #
-    #     def __init__(self, client_id, client_secret, scope, storage):
-    #         super().__init__(client_id=client_id, client_secret=client_secret, scope=scope, storage=storage)
-    #
-    #     async def authorize(self, url=None):
-    #         '''Authorize the client. Reads from the file specificed by `store`.'''
-    #
-    #         data = await self.load()
-    #
-    #         # no data found, run first time setup
-    #         # get response class, pass it to .store
-    #         if data is None:
-    #             if url is None:
-    #                 raise spotify_errors.AuthorizationError
-    #             data = await self.setup(url)
-    #
-    #             if isinstance(data, AuthenticationResponse):
-    #                 await self.store(data)
-    #
-    #         if not isinstance(data, AuthenticationResponse):
-    #             raise TypeError('setup() has to return an AuthenticationResponse')
-    #
-    #         self._data = data
-    #
-    #         # refresh it now if it's expired
-    #         if self._data.is_expired():
-    #             await self.refresh(start_task=True)
-    #         else:
-    #             # manually start refresh task if we didn't refresh on startup
-    #             self.refresh_in(self._data.seconds_until_expire())
-    #
-    #     def access_token(self):
-    #         return self._data.access_token
-    #
-    #     async def setup(self, url):
-    #
-    #         code_url = url
-    #
-    #         src = self.get_code_from_redirect(code_url)
-    #         d = self.create_token_data_from_code(src)
-    #
-    #         data = await self._token(d)
-    #         return self.response_class(data)
-
     _track_prefix = 'spotify%3Atrack%3A'
     _album_prefix = 'spotify:album:'
     _playlist_prefix = 'spotify:playlist:'
@@ -112,13 +22,44 @@ class AsyncSpotify:
     _update_timeout = 5
     _volume_step = 5
 
+    @staticmethod
+    async def __get_info(item) -> list[list[str]]:
+        """
+        collects artist, track, uri from search request and pack to list
+        :param item:
+        :return: list of lists of artist, track, uri
+        """
+        res = []
+        for i in item["tracks"]:
+            res.append([i.artists[0].name, i.name, i.id])
+        return res
+
+    @staticmethod
+    def error_wrapper():
+        def wrapper(function):
+            @functools.wraps(function)
+            async def wrapped(*args, **kwargs):
+                try:
+                    res = await function(*args, **kwargs)
+                except asyncspotify.Forbidden:
+                    raise PremiumRequired
+                except:
+                    raise ConnectionError
+                return res
+
+            return wrapped
+
+        return wrapper
+
+    @staticmethod
+    def get_full_uri(uri: str):
+        if uri.find(AsyncSpotify._track_prefix) == -1:
+            return AsyncSpotify._track_prefix + uri
+
     def __init__(self):
         self._client_id = config.spotify_client_id.get_secret_value()
         self._client_secret = config.spotify_client_secret.get_secret_value()
-        self._spotify_username = config.spotify_username.get_secret_value()
-        self._redirect_uri = config.spotify_redirect_uri.get_secret_value()
         self._scope = asyncspotify.Scope(user_modify_playback_state=True, user_read_playback_state=True)
-        self._token_file = config.token_file.get_secret_value()
         self._lyrics_finder = LyricsFinder()
         self._last_song_lyrics: Lyrics | None = None
 
@@ -127,24 +68,31 @@ class AsyncSpotify:
             client_secret=self._client_secret,
             scope=self._scope,
         )
-        self._auth.redirect_uri = self._redirect_uri
+        self._auth.redirect_uri = config.spotify_redirect_uri.get_secret_value()
 
-        self._session = AsyncSpotify.ModifiedClient(self._auth)
+        self._session = ModifiedClient(self._auth)
         self._volume = 50
         self._saved_volume = self._volume
         self._playing: bool = False
         self._cached_currently_playing: asyncspotify.CurrentlyPlaying | None = None
         self._last_update_time = 0
         self._authorized = False
+        self._closed = False
+
+        self._users_queue: list[TrackInQueue] = []
 
     @property
     def authorized(self) -> bool:
         return self._authorized
 
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
     async def create_authorize_route(self) -> str:
         return self._session.auth.create_authorize_route()
 
-    async def authorize(self, storage_id=None):
+    async def authorize(self, storage_id):
         if not self._authorized:
             await self._session.authorize(storage_id)
         try:
@@ -184,6 +132,7 @@ class AsyncSpotify:
 
     async def close(self):
         await self._session.close()
+        self._closed = True
         self._authorized = False
 
     async def force_update(self):
@@ -197,33 +146,17 @@ class AsyncSpotify:
         if (now - self._last_update_time) >= self._update_timeout:
             await self.force_update()
 
-    @staticmethod
-    async def __get_info(item) -> list[list[str]]:
+    @error_wrapper()
+    async def get_curr_track(self) -> tuple[list[str], str]:
         """
-        collects artist, track, uri from search request and pack to list
-        :param item:
-        :return: list of lists of artist, track, uri
+        get authors as str list and track name
         """
-        res = []
-        for i in item["tracks"]:
-            res.append([i.artists[0].name, i.name, i.id])
-        return res
-
-    @staticmethod
-    def get_full_uri(uri: str):
-        if uri.find(AsyncSpotify._track_prefix) == -1:
-            return AsyncSpotify._track_prefix + uri
-
-    async def get_curr_track(self):
-        try:
-            await self.update()
-            currently_playing = self._cached_currently_playing
-            curr_track = currently_playing.track
-            artists = [artist.name for artist in curr_track.artists]
-            name = curr_track.name
-            return [artists, name]
-        except:
-            raise ConnectionError
+        await self.update()
+        currently_playing = self._cached_currently_playing
+        curr_track = currently_playing.track
+        artists = [artist.name for artist in curr_track.artists]
+        name = curr_track.name
+        return artists, name
 
     async def get_lyrics(self, func_waiter=None, **func_waiter_kwargs):
         artists, name = await self.get_curr_track()
@@ -245,114 +178,93 @@ class AsyncSpotify:
             self._last_song_lyrics = await self._lyrics_finder.find(main_author, name)
             return self._last_song_lyrics
 
-    async def add_track_to_queue(self, uri):
-        try:
-            if self._track_prefix not in uri:
-                uri = self._track_prefix + uri
-            await self._session.player_add_to_queue(uri)
-        except asyncspotify.Forbidden:
-            raise PremiumRequired
-        except:
-            raise ConnectionError
+    @error_wrapper()
+    async def add_track_to_queue(self, username: str, uri: str):
+        if self._track_prefix not in uri:
+            uri = self._track_prefix + uri
+        await self._session.player_add_to_queue(uri)
+        self._users_queue.append(TrackInQueue(username, uri))
 
-    async def get_curr_user_queue(self) -> list[asyncspotify.SimpleTrack]:
-        try:
-            queue = await self._session.get_curr_user_queue()
+    def _sync_queue(self, spotify_queue: list[asyncspotify.SimpleTrack]):
+        start_index = -1
+        first_spotify_track = spotify_queue[0]
+        for index in range(len(self._users_queue)):
+            if self._users_queue[index].track_uri == first_spotify_track.uri:
+                start_index = index
+                break
+        if start_index == -1:
+            self._users_queue = []
+        else:
+            self._users_queue = self._users_queue[start_index:]
 
-            #await self.synchronize_queue()
+    @error_wrapper()
+    async def get_curr_user_queue(self) -> list[TrackWithUser]:
+        if len(self._users_queue) == 0:
+            return []
 
-            return queue
-        except asyncspotify.Forbidden:
-            raise PremiumRequired
-        except:
-            raise ConnectionError
+        queue = await self._session.get_curr_user_queue()
+        self._sync_queue(queue)
+        return [TrackWithUser(self._users_queue[i].author_username, queue[i]) for i in
+                range(len(self._users_queue))]
 
     async def get_formatted_curr_user_queue(self) -> list[str]:
-        queue = await self.get_curr_user_queue()
+        queue: list[TrackWithUser] = await self.get_curr_user_queue()
         res = []
         for item in queue:
-            res.append(item.name + ' - ' + ', '.join([artist.name for artist in item.artists]))
+            res.append(item.track.name + ' - ' + ', '.join([artist.name for artist in item.track.artists]))
         return res
 
+    @error_wrapper()
     async def next_track(self):
-        try:
-            await self._session.player_next()
-            self._playing = True
-            await self.force_update()
-        except asyncspotify.Forbidden:
-            raise PremiumRequired
-        except:
-            raise ConnectionError
+        await self._session.player_next()
+        self._playing = True
+        await self.force_update()
 
+    @error_wrapper()
     async def previous_track(self):
-        try:
-            await self._session.player_prev()
-            self._playing = True
-            await self.force_update()
-        except asyncspotify.Forbidden:
-            raise PremiumRequired
-        except:
-            raise ConnectionError
+        await self._session.player_prev()
+        self._playing = True
+        await self.force_update()
 
+    @error_wrapper()
     async def start_pause(self):
-        try:
-            currently_playing = await self._session.player_currently_playing()
-            if currently_playing.is_playing:
-                self._playing = False
-                await self._session.player_pause()
-            else:
-                self._playing = True
-                await self._session.player_play()
-        except asyncspotify.Forbidden:
-            raise PremiumRequired
-        except:
-            raise ConnectionError
+        currently_playing = await self._session.player_currently_playing()
+        if currently_playing.is_playing:
+            self._playing = False
+            await self._session.player_pause()
+        else:
+            self._playing = True
+            await self._session.player_play()
 
+    @error_wrapper()
     async def increase_volume(self):
-        try:
-            await self._session.player_volume(min(100, self._volume + self._volume_step))
-        except asyncspotify.Forbidden:
-            pass
-        else:
-            self._volume = min(100, self._volume + self._volume_step)
+        await self._session.player_volume(min(100, self._volume + self._volume_step))
+        self._volume = min(100, self._volume + self._volume_step)
 
+    @error_wrapper()
     async def decrease_volume(self):
-        try:
-            await self._session.player_volume(max(0, self._volume - self._volume_step))
-        except asyncspotify.Forbidden:
-            pass
-        else:
-            self._volume = max(0, self._volume - self._volume_step)
+        await self._session.player_volume(max(0, self._volume - self._volume_step))
+        self._volume = max(0, self._volume - self._volume_step)
 
+    @error_wrapper()
     async def get_devices(self) -> list[asyncspotify.Device]:
-        devices = await self._session.get_devices()
-        return devices
+        return await self._session.get_devices()
 
+    @error_wrapper()
     async def transfer_player(self, device: str | asyncspotify.Device):
-        try:
-            await self._session.transfer_playback(device)
-            await asyncio.sleep(1)
-            await self._session.player_volume(self._volume)
-        except:
-            raise ConnectionError
+        await self._session.transfer_playback(device)
+        await asyncio.sleep(1)
+        await self._session.player_volume(self._volume)
 
-    # TODO implement
-    async def synchronize_queue(self):
-        """shift queue top to current song"""
-        raise NotImplementedError('synchronize_queue')
-
+    @error_wrapper()
     async def mute_unmute(self):
-        old_values = [self._volume, self._saved_volume]
-        try:
-            if self._volume == 0:
-                self._volume = self._saved_volume
-            else:
-                self._saved_volume = self._volume
-                self._volume = 0
-            await self._session.player_volume(self._volume)
-        except asyncspotify.Forbidden:
-            self._volume, self._saved_volume = old_values
-            raise Forbidden
+        if self._volume == 0:
+            await self._session.player_volume(self._saved_volume)
+            self._volume = self._saved_volume
+        else:
+            await self._session.player_volume(0)
+            self._saved_volume = self._volume
+            self._volume = 0
 
     @property
     def volume(self):
@@ -362,12 +274,10 @@ class AsyncSpotify:
     def is_playing(self):
         return self._playing
 
+    @error_wrapper()
     async def search(self, request: str) -> list[list[str]]:
         """
         :param request: запрос
         :return: список с id, автором, названием
         """
-        try:
-            return await self.__get_info(await self._session.search("track", q=request, limit=10))
-        except:
-            raise ConnectionError
+        return await self.__get_info(await self._session.search("track", q=request, limit=10))

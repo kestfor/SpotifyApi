@@ -7,9 +7,9 @@ from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bot.filters import UrlFilter
 from src.bot.callbacks_factory.factories import GetNextLyrics, AddAdminFactory, ChangeDeviceFactory, \
     AddSongCallbackFactory
+from src.bot.filters import UrlFilter
 from src.bot.handlers.error_handlers.handlers import handle_connection_error, handle_premium_required_error
 from src.bot.spotify_sessions import spotify_sessions
 from src.bot.utils.keyboards import get_menu_keyboard, get_admin_menu_keyboard, get_user_menu_keyboard, \
@@ -235,7 +235,6 @@ async def get_settings(callback: CallbackQuery, user):
                                      reply_markup=get_settings_keyboard(user))
 
 
-
 @router.callback_query(F.data == "add_track")
 async def search_track_callback(callback: CallbackQuery):
     await callback.message.edit_text("введите поисковой запрос 🔎",
@@ -269,7 +268,6 @@ async def search_track_handler(message: Message, user: User, session: AsyncSessi
         await message.delete()
 
 
-# TODO add song to queue
 @router.callback_query(AddSongCallbackFactory.filter())
 async def add_song_to_queue(callback: CallbackQuery, callback_data: AddSongCallbackFactory, user: User, session):
     raw_uri = callback_data.uri
@@ -340,20 +338,17 @@ async def confirm_end_session(callback: CallbackQuery):
                                      reply_markup=builder.as_markup())
 
 
-# TODO clear spotify, clear music session
 @router.callback_query(F.data == 'end_session')
-async def end_session(callback: CallbackQuery, bot: Bot, user: User):
-    try:
-        if not user.is_admin:
-            await bot.send_message(chat_id=callback.from_user.id,
-                                   text="сессия завершена, для ее начала обратитесь к админам",
-                                   reply_markup=None)
-        else:
-            await bot.send_message(chat_id=callback.from_user.id,
-                                   text='сессия завершена, для начала новой используйте команду "/start"',
-                                   reply_markup=None)
-    except:
-        pass
+async def end_session(callback: CallbackQuery, user: User, session: AsyncSession):
+    users = await user.session.get_users(session)
+    for user in users:
+        await spotify_sessions.clear_spotify(user)
+    await user.session.delete(session)
+    await callback.message.edit_text(
+        text='сессия завершена, для начала новой используйте команду "/start"',
+        reply_markup=None)
+    await asyncio.sleep(3)
+    await callback.message.delete()
 
 
 @router.callback_query(F.data == 'increase_volume')
@@ -407,9 +402,9 @@ async def leave_session(callback: CallbackQuery, user: User, session: AsyncSessi
         await confirm_end_session(callback)
 
 
-# TODO insert sql logic
 @router.callback_query(F.data == "confirm_leave_session")
 async def confirm_leave_session(callback: CallbackQuery, user: User, session: AsyncSession):
+    await user.leave_session(session)
     await callback.message.edit_text(text='вы покинули сессию')
-    await asyncio.sleep(5)
+    await asyncio.sleep(3)
     await callback.message.delete()
