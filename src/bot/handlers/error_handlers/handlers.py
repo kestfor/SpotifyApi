@@ -48,13 +48,13 @@ async def handle_premium_required_error(callback: CallbackQuery | Message):
         await callback.answer("Для этой функции требуется spotify premium", reply_markup=builder.as_markup())
 
 
-async def handle_connection_error(callback: CallbackQuery | Message, user: User, bot=None):
-    user_id = user.user_id
+async def handle_connection_error(callback: CallbackQuery | Message, user: User = None, bot=None):
+    user_id = callback.from_user.id
     text = 'ошибка соединения с Spotify 😞\nпроверьте что запущено хотя бы одно устройство воспроизведения'
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="обновить", callback_data="refresh"))
     builder.row(InlineKeyboardButton(text='покинуть сессию', callback_data='leave_session'))
-    if user.is_admin:
+    if user is not None and user.is_admin:
         builder.row(InlineKeyboardButton(text='завершить сессию', callback_data="confirm_end_session"))
     if bot is None:
         if isinstance(callback, CallbackQuery):

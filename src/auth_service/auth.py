@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.env import SPOTIFY_REDIRECT_URI, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 from src.sql.engine import get_session
 from src.sql.models.auth import Auth
+from src.sql.models.user import User
 
 app = fastapi.FastAPI()
 
@@ -31,9 +32,7 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
         response = await client_session.post("https://accounts.spotify.com/api/token", data=body)
 
         if response.status == 200:
-            print("Authorization src received")
             data = await response.json()
-            print(data)
             created_at = datetime.datetime.now(datetime.timezone.utc)
 
             data['created_at'] = created_at

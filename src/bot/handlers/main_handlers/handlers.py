@@ -63,9 +63,7 @@ async def view_queue(callback: CallbackQuery, user: User, session: AsyncSession)
 async def view_lyrics(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
     try:
-        lyrics = await spotify.get_lyrics(callback.message.edit_text,
-                                          text="ищу текст песни\nподождите чуток\nтекст сейчас появится 😉",
-                                          reply_markup=get_menu_keyboard())
+        lyrics = await spotify.get_lyrics()
     except ValueError:
         await callback.message.edit_text("не удалось найти текст", reply_markup=get_menu_keyboard())
     else:

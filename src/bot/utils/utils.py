@@ -1,4 +1,3 @@
-import json
 import random
 from string import ascii_letters, digits
 
@@ -15,14 +14,6 @@ from src.sql.models.session import Session
 def generate_token(length) -> str:
     token = ''.join([random.choice(ascii_letters + digits) for _ in range(length)])
     return token
-
-
-def update_admins(user_id, user_name):
-    with open("../../../data/admins.json", 'r', encoding="utf-8") as file:
-        before = json.load(file)
-    before[str(user_id)] = user_name
-    with open('../../../data/admins.json', 'w', encoding="utf-8") as file:
-        file.write(json.dumps(before, indent=4, ensure_ascii=False))
 
 
 def get_volume_emoji(volume: int):
@@ -54,17 +45,6 @@ async def get_menu_text(spotify: AsyncSpotify, session: Session, sql_session: As
     return text
 
 
-# async def synchronize_queues(spotify_queue):
-#     top_track = spotify_queue[0].id
-#     ids = [item[1] for item in db.user_queue]
-#     if top_track not in ids:
-#         db.user_queue = []
-#     else:
-#         top_track_ind = ids.index(top_track)
-#         db.user_queue = db.user_queue[top_track_ind:]
-
-
-# TODO добавить возможность видеть кто поставил трек
 async def get_queue_text(spotify: AsyncSpotify):
     queue: list[TrackWithUser] = await spotify.get_curr_user_queue()
     max_items_num = 10

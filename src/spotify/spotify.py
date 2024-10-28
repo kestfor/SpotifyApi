@@ -91,6 +91,9 @@ class AsyncSpotify:
     async def create_authorize_route(self) -> str:
         return self._session.auth.create_authorize_route()
 
+    def deauthorize(self):
+        self._authorized = False
+
     async def authorize(self, storage_id):
         if not self._authorized:
             await self._session.authorize(storage_id)
@@ -157,7 +160,7 @@ class AsyncSpotify:
         return artists, name
 
     @error_wrapper()
-    async def get_lyrics(self, func_waiter=None, **func_waiter_kwargs):
+    async def get_lyrics(self):
         artists, name = await self.get_curr_track()
         main_author = artists[0]
         name = name[:name.find('(')] if '(' in name else name
@@ -167,13 +170,9 @@ class AsyncSpotify:
             if main_author.lower() == cached_artist and cached_song == name.lower():
                 return self._last_song_lyrics
             else:
-                if func_waiter is not None:
-                    await func_waiter(**func_waiter_kwargs)
                 self._last_song_lyrics = await self._lyrics_finder.find(main_author, name)
                 return self._last_song_lyrics
         else:
-            if func_waiter is not None:
-                await func_waiter(**func_waiter_kwargs)
             self._last_song_lyrics = await self._lyrics_finder.find(main_author, name)
             return self._last_song_lyrics
 
