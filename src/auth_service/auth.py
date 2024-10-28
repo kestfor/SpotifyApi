@@ -7,14 +7,12 @@ from aiohttp import ClientSession
 from fastapi import Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.env import SPOTIFY_REDIRECT_URI, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 from src.sql.engine import get_session
 from src.sql.models.auth import Auth
-from src.sql.models.user import User
 
 app = fastapi.FastAPI()
-
-CLIENT_ID = "e76571fbbd914d1b9dadbca52f72a38b"
-CLIENT_SECRET = "0c99922335eb4fb7b4ee3f0b83088c43"
 
 
 @app.get("/callback")
@@ -24,9 +22,9 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
     body = {
         "code": code,
         "grant_type": "authorization_code",
-        "redirect_uri": "http://localhost:80/callback",
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
+        "redirect_uri": SPOTIFY_REDIRECT_URI,
+        "client_id": SPOTIFY_CLIENT_ID,
+        "client_secret": SPOTIFY_CLIENT_SECRET,
     }
 
     async with ClientSession() as client_session:

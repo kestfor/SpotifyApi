@@ -34,18 +34,20 @@ async def view_qr(callback: CallbackQuery, bot: Bot, user: User, session: AsyncS
     builder.row(InlineKeyboardButton(text="в меню", callback_data="back_from_qr"))
     await bot.send_photo(photo=document, chat_id=callback.from_user.id,
                          reply_markup=builder.as_markup())
+    await callback.message.delete()
     os.remove("qr_token")
 
 
 @router.callback_query(F.data == 'back_from_qr')
-async def back_from_qr(bot: Bot, session: AsyncSession, user: User):
-    spotify = spotify_sessions[user.user_id]
+async def back_from_qr(callback: CallbackQuery, bot: Bot, session: AsyncSession, user: User):
+    spotify = await spotify_sessions.get_or_create(user, session)
     text = await get_menu_text(spotify, user.session, session)
     if user.is_admin:
         markup = get_admin_menu_keyboard()
     else:
         markup = get_user_menu_keyboard()
     await bot.send_message(text=text, chat_id=user.user_id, reply_markup=markup)
+    await callback.message.delete()
 
 
 @router.callback_query(F.data == 'view_url')

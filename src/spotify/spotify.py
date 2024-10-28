@@ -1,17 +1,16 @@
 import asyncio
 import functools
 import time
-from math import trunc
 
 import asyncspotify
 import asyncspotify.http
 
-from src.config_reader import config
+from src.env import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REDIRECT_URI
 from src.lyrics.lyrics import Lyrics, LyricsFinder
-from src.spotify.TrackInQueue import TrackInQueue, TrackWithUser
 from src.spotify.db_auth import DatabaseAuth
 from src.spotify.modified_client import ModifiedClient
 from src.spotify.spotify_errors import *
+from src.spotify.track_in_queue import TrackInQueue, TrackWithUser
 
 
 class AsyncSpotify:
@@ -43,7 +42,8 @@ class AsyncSpotify:
                     res = await function(*args, **kwargs)
                 except asyncspotify.Forbidden:
                     raise PremiumRequired
-                except:
+                except Exception as e:
+                    print(e)
                     raise ConnectionError
                 return res
 
@@ -57,8 +57,8 @@ class AsyncSpotify:
             return AsyncSpotify._track_prefix + uri
 
     def __init__(self):
-        self._client_id = config.spotify_client_id.get_secret_value()
-        self._client_secret = config.spotify_client_secret.get_secret_value()
+        self._client_id = SPOTIFY_CLIENT_ID
+        self._client_secret = SPOTIFY_CLIENT_SECRET
         self._scope = asyncspotify.Scope(user_modify_playback_state=True, user_read_playback_state=True)
         self._lyrics_finder = LyricsFinder()
         self._last_song_lyrics: Lyrics | None = None
@@ -68,7 +68,7 @@ class AsyncSpotify:
             client_secret=self._client_secret,
             scope=self._scope,
         )
-        self._auth.redirect_uri = config.spotify_redirect_uri.get_secret_value()
+        self._auth.redirect_uri = SPOTIFY_REDIRECT_URI
 
         self._session = ModifiedClient(self._auth)
         self._volume = 50

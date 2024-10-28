@@ -1,31 +1,30 @@
 import asyncio
+import logging
 import sys
 
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from src.bot.handlers.connect_user_to_session_route.connection_route import router as connect_users_router
-from src.bot.handlers.main_handlers.handlers import router as main_router
+from src.bot.handlers.init_handlers.init_handlers import router as init_router
 from src.bot.handlers.invites.view_invites import router as invites_router
+from src.bot.handlers.main_handlers.handlers import router as main_router
 from src.bot.middlewares.database_session_middleware import DatabaseMiddleware
 from src.bot.middlewares.session_member_middleware import SessionMemberMiddleware
 from src.bot.middlewares.user_middleware import UserMiddleware
-from src.config_reader import Settings
-from src.bot.handlers.init_handlers.init_handlers import router as init_router
+from src.env import BOT_TOKEN
 from src.sql.engine import async_session
-import logging
 
 logging.basicConfig(level=logging.DEBUG,
-                        format="%(asctime)s - %(levelname)s - %(filename)s %(funcName)s: %(lineno)d - %(message)s",
-                        handlers=[
-                            logging.FileHandler("file.log", encoding="utf-8"),
-                            logging.StreamHandler(sys.stdout)
-                        ])
+                    format="%(asctime)s - %(levelname)s - %(filename)s %(funcName)s: %(lineno)d - %(message)s",
+                    handlers=[
+                        logging.FileHandler("../../log.log", encoding="utf-8"),
+                        logging.StreamHandler(sys.stdout)
+                    ])
 
 
 async def main():
-    settings = Settings()
-    token = settings.bot_token.get_secret_value()
+    token = BOT_TOKEN
     bot = Bot(token=token)
     dp = Dispatcher()
 
@@ -42,7 +41,6 @@ async def main():
     scheduler.start()
     dp.include_routers(init_router, connect_users_router, main_router, invites_router)
 
-    print("started")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

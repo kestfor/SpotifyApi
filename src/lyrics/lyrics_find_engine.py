@@ -1,7 +1,8 @@
-import lyricsgenius
-from lyricsgenius.utils import clean_str
-from bs4 import BeautifulSoup
 import re
+
+import lyricsgenius
+from bs4 import BeautifulSoup
+from lyricsgenius.utils import clean_str
 
 
 class Genius(lyricsgenius.Genius):
@@ -179,4 +180,3 @@ class Genius(lyricsgenius.Genius):
     def search_song(self, title=None, artist="", song_id=None,
                     get_full_info=True):
         return super().search_song(title, artist, song_id, get_full_info)
-

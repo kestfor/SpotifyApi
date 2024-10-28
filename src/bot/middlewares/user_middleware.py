@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import Callable, Dict, Any, Awaitable
 
 from aiogram import BaseMiddleware, types

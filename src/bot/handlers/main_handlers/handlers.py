@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.bot.callbacks_factory.factories import GetNextLyrics, AddAdminFactory, ChangeDeviceFactory, \
     AddSongCallbackFactory
 from src.bot.filters import UrlFilter
-from src.bot.handlers.error_handlers.handlers import handle_connection_error, handle_premium_required_error
+from src.bot.handlers.error_handlers.handlers import handle_connection_error, handle_premium_required_error, \
+    error_wrapper
 from src.bot.spotify_sessions import spotify_sessions
 from src.bot.utils.keyboards import get_menu_keyboard, get_admin_menu_keyboard, get_user_menu_keyboard, \
     get_settings_keyboard
@@ -190,6 +191,8 @@ async def transfer_playback(callback: CallbackQuery, callback_data: ChangeDevice
         return
     try:
         await spotify.transfer_player(device_id)
+    except PremiumRequired:
+        await handle_premium_required_error(callback)
     except ConnectionError:
         await callback.message.edit_text("не удалось изменить устройство", reply_markup=get_menu_keyboard())
     else:
@@ -269,17 +272,12 @@ async def search_track_handler(message: Message, user: User, session: AsyncSessi
 
 
 @router.callback_query(AddSongCallbackFactory.filter())
+@error_wrapper()
 async def add_song_to_queue(callback: CallbackQuery, callback_data: AddSongCallbackFactory, user: User, session):
     raw_uri = callback_data.uri
     spotify = await spotify_sessions.get_or_create(user, session)
-    try:
-        await spotify.add_track_to_queue(raw_uri)
-    except PremiumRequired:
-        await handle_premium_required_error(callback)
-    except ConnectionError:
-        await handle_connection_error(callback, user)
-    else:
-        await callback.message.edit_text("трек добавлен в очередь 👌", reply_markup=get_menu_keyboard())
+    await spotify.add_track_to_queue(user.username, raw_uri)
+    await callback.message.edit_text("трек добавлен в очередь 👌", reply_markup=get_menu_keyboard())
 
 
 @router.callback_query(F.data == 'start_pause')

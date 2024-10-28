@@ -1,11 +1,8 @@
-from typing import TYPE_CHECKING
-
 from sqlalchemy import BigInteger, String, DateTime
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
-from src.sql.models.base import Base
-
 from src.session.user import User
+from src.sql.models.base import Base
 
 
 class Auth(Base):

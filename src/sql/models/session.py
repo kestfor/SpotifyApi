@@ -4,8 +4,8 @@ from sqlalchemy import BigInteger, String, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
-from src.sql.models.base import Base
 import src.sql.models.user as user_model
+from src.sql.models.base import Base
 
 if TYPE_CHECKING:
     from src.sql.models.user import User

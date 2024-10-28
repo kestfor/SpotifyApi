@@ -1,11 +1,11 @@
 from sqlalchemy import select, delete
 from sqlalchemy.dialects.mysql import insert
-
-from src.session.user import TelegramUser
-from src.sql.engine import async_session
 from src.sql.tables import Session as SQL_SESSION
 from src.sql.tables import User as SQL_USER
 from src.sql.tables import UserInSession as SQL_USER_IN_SESSION
+
+from src.session.user import TelegramUser
+from src.sql.engine import async_session
 
 
 class SQLSessionController:

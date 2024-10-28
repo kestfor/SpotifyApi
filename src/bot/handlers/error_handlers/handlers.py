@@ -1,7 +1,41 @@
+import functools
+
+from aiogram import Bot
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from src.spotify.spotify_errors import PremiumRequired
 from src.sql.models.user import User
+
+
+def error_wrapper():
+    def wrapper(function):
+        @functools.wraps(function)
+        async def wrapped(*args, **kwargs):
+            res = None
+            try:
+                res = await function(*args, **kwargs)
+            except PremiumRequired:
+                arg1 = None
+                for arg in args:
+                    if isinstance(arg, CallbackQuery | Message):
+                        arg1 = arg
+                await handle_premium_required_error(arg1)
+            except ConnectionError:
+                arg1 = arg2 = arg3 = None
+                for arg in args:
+                    if isinstance(arg, Message | CallbackQuery):
+                        arg1 = arg
+                    if isinstance(arg, User):
+                        arg2 = arg
+                    if isinstance(arg, Bot):
+                        arg3 = arg
+                await handle_connection_error(arg1, arg2, arg3)
+            return res
+
+        return wrapped
+
+    return wrapper
 
 
 async def handle_premium_required_error(callback: CallbackQuery | Message):
@@ -16,7 +50,7 @@ async def handle_premium_required_error(callback: CallbackQuery | Message):
 
 async def handle_connection_error(callback: CallbackQuery | Message, user: User, bot=None):
     user_id = user.user_id
-    text = 'ошибка соединения с Spotify 😞'
+    text = 'ошибка соединения с Spotify 😞\nпроверьте что запущено хотя бы одно устройство воспроизведения'
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="обновить", callback_data="refresh"))
     builder.row(InlineKeyboardButton(text='покинуть сессию', callback_data='leave_session'))

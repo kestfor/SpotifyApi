@@ -1,6 +1,5 @@
 import logging
 from typing import Callable, Dict, Any, Awaitable
-from uuid import uuid4
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Update

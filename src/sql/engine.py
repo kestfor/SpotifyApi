@@ -1,13 +1,14 @@
 from sqlalchemy import URL
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from src.config_reader import config
+
+from src.env import DB_HOST, DB_PORT, DB_PASSWORD, DB_USERNAME
 
 DATABASE = {
     'drivername': 'mysql+asyncmy',
-    'host': config.db_host.get_secret_value(),
-    'port': config.db_port.get_secret_value(),
-    'username': config.db_username.get_secret_value(),
-    'password': config.db_password.get_secret_value(),
+    'host': DB_HOST,
+    'port': DB_PORT,
+    'username': DB_USERNAME,
+    'password': DB_PASSWORD,
     'database': 'share_music'
 }
 

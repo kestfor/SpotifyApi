@@ -7,8 +7,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bot.callbacks_factory.factories import GetNextLyrics
-from src.spotify.TrackInQueue import TrackWithUser
 from src.spotify.spotify import AsyncSpotify
+from src.spotify.track_in_queue import TrackWithUser
 from src.sql.models.session import Session
 
 
