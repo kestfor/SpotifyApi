@@ -1,6 +1,5 @@
 import datetime
 from typing import Annotated
-
 import fastapi
 import uvicorn
 from aiohttp import ClientSession
@@ -52,3 +51,5 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
 
 if __name__ == "__main__":
     uvicorn.run(app, host='0.0.0.0', port=80)
+
+

@@ -18,7 +18,7 @@ from src.sql.engine import async_session
 logging.basicConfig(level=logging.DEBUG,
                     format="%(asctime)s - %(levelname)s - %(filename)s %(funcName)s: %(lineno)d - %(message)s",
                     handlers=[
-                        logging.FileHandler("../../log.log", encoding="utf-8"),
+                        # logging.FileHandler("../../log.log", encoding="utf-8"),
                         logging.StreamHandler(sys.stdout)
                     ])
 

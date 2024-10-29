@@ -3,10 +3,21 @@ version: '3.7'
 services:
   bot:
     build: .
+    environment:
+      PYTHONPATH: "/bots/SpotifyBot"
     command: >
       sh -c "ls
-             cd ./code
+             cd ./src/bot
              python bot.py"
+  auth:
+    build: .
+    environment:
+      PYTHONPATH: "/bots/SpotifyBot"
+    command: >
+      sh -c "ls
+             cd ./src/auth_service
+             python auth.py"
+  
 
 
 volumes:
