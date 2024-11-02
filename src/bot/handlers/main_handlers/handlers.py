@@ -45,6 +45,7 @@ async def refresh(callback: CallbackQuery, spotify: AsyncSpotify, user: User, se
         await menu(callback, spotify, user, session)
 
 
+# TODO всегда выдает нет треков в очереди, где-то тут баг
 @router.callback_query(F.data == 'view_queue')
 @error_wrapper()
 async def view_queue(callback: CallbackQuery, user: User, session: AsyncSession):

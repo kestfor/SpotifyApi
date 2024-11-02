@@ -254,6 +254,7 @@ class AsyncSpotify:
         await asyncio.sleep(1)
         await self._session.player_volume(self._volume)
 
+    #TODO здесь лажа какая-то, метод не работает
     @error_wrapper()
     async def mute_unmute(self):
         if self._volume == 0:
