@@ -15,6 +15,7 @@ class Auth(Base):
     expires_in = mapped_column(DateTime)
     expires_at = mapped_column(DateTime)
     scope = mapped_column(String(255))
+    hash = mapped_column(String(64))
 
     user: Mapped['User'] = relationship("User", back_populates="auth", lazy='joined')
 
@@ -22,4 +23,5 @@ class Auth(Base):
         tmp = {c.name: getattr(self, c.name) for c in self.__table__.columns}
         tmp["created_at"] = tmp["created_at"].isoformat()
         tmp["expires_at"] = tmp["expires_at"].isoformat()
+        tmp.pop("hash", None)
         return tmp

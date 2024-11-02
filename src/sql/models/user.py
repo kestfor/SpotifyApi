@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from sqlalchemy import BigInteger, ForeignKey, String
+from sqlalchemy import BigInteger, ForeignKey, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import mapped_column, relationship, Mapped
 
@@ -32,12 +32,13 @@ class User(Base):
             await session.flush()
         return obj
 
-    async def add_auth(self, session: AsyncSession, auth_id: int):
-        auth = await session.get(Auth, auth_id)
+    async def add_auth(self, session: AsyncSession, hash: str):
+        auth = (await session.execute(select(Auth).where(Auth.hash == hash))).scalar()
         if auth is not None:
             self.auth = auth
+            self.auth_id = auth.id
         else:
-            logging.warning(f"User {self.user_id} has no auth {auth_id}")
+            logging.warning(f"User {self.user_id} has no auth with hash {hash}")
 
     async def add_to_session(self, session: AsyncSession, session_id: int):
         session = await session.get(Session, session_id)

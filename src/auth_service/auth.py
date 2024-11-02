@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 from typing import Annotated
 import fastapi
 import uvicorn
@@ -41,8 +42,9 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
                 new_auth = Auth(**data)
                 session.add(new_auth)
                 await session.flush()
+                new_auth.hash = hashlib.sha1(new_auth.id.to_bytes(8, "big")).hexdigest()
 
-            return RedirectResponse(f'{tg_redirect_url}{new_auth.id}')
+            return RedirectResponse(f'{tg_redirect_url}{new_auth.hash}')
         else:
             print(response.status, response.reason)
             print("error occured")

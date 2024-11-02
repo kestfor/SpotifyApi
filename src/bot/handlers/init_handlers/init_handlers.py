@@ -51,9 +51,9 @@ async def start_by_command(message: Message, command: CommandObject, state: FSMC
                 await add_user_to_session_handler(message, state, user, session, token)
         case StartArg.Type.AUTH:
 
-            auth_id = start_arg.value
+            auth_hash = start_arg.value
 
-            await user.add_auth(session, auth_id)
+            await user.add_auth(session, auth_hash)
 
             await admin_start(message, user)
 
