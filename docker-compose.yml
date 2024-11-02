@@ -9,8 +9,11 @@ services:
       sh -c "ls
              cd ./src/bot
              python bot.py"
+
   auth:
     build: .
+    ports:
+      - "80:80"
     environment:
       PYTHONPATH: "/bots/SpotifyBot"
     command: >
