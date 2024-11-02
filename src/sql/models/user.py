@@ -17,6 +17,7 @@ class User(Base):
 
     user_id = mapped_column(BigInteger, primary_key=True)
     username = mapped_column(String(255))
+    last_message_id = mapped_column(BigInteger, nullable=True)
     auth_id = mapped_column(ForeignKey('auth.id'), nullable=True)
     session_id = mapped_column(ForeignKey("session.id", ondelete="SET NULL"), nullable=True)
 

@@ -1,14 +1,22 @@
-import logging
 from typing import Callable, Dict, Any, Awaitable
 
-from aiogram import BaseMiddleware, types
+from aiogram import BaseMiddleware, types, Bot
 from aiogram.types import Update
 
-from src.sql.engine import get_session
 from src.sql.models.user import User
 
 
 class UserMiddleware(BaseMiddleware):
+
+    @staticmethod
+    async def _delete_prev_message(user: User, data: Dict[str, Any]):
+        bot: Bot = data.get("bot")
+        if user.last_message_id is not None:
+            try:
+                await bot.delete_message(user.user_id, user.last_message_id)
+            except:
+                pass
+
     async def __call__(
             self,
             handler: Callable[[Update, Dict[str, Any]], Awaitable[Any]],
@@ -20,22 +28,20 @@ class UserMiddleware(BaseMiddleware):
             from_user = event.from_user
         if from_user:
             session = data.get("session")
-            if session is None:
-                logging.warning("new session creation")
-                async with get_session() as session:
-                    user = await User.get_or_create(
-                        session=session,
-                        user_id=from_user.id,
-                        username=from_user.username,
-                    )
-                    data["user"] = user
-                    return await handler(event, data)
-            else:
-                user = await User.get_or_create(
-                    session=session,
-                    user_id=from_user.id,
-                    username=from_user.username,
-                )
-                data["user"] = user
-                return await handler(event, data)
-        return await handler(event, data)
+
+            user = await User.get_or_create(
+                session=session,
+                user_id=from_user.id,
+                username=from_user.username,
+            )
+
+            match event:
+                case types.Message():
+                    await self._delete_prev_message(user, data)
+                    user.last_message_id = event.message_id
+                case types.CallbackQuery():
+                    user.last_message_id = event.message.message_id
+
+            data["user"] = user
+
+            return await handler(event, data)

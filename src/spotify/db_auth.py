@@ -1,3 +1,5 @@
+import hashlib
+
 from asyncspotify import AuthorizationCodeFlow, Scope
 from asyncspotify.oauth.response import AuthorizationCodeFlowResponse
 from sqlalchemy.dialects.mysql import insert
@@ -54,6 +56,7 @@ class DatabaseAuth(AuthorizationCodeFlow):
             async with async_session() as session:
                 data = response.to_dict()
                 data["id"] = self._storage_id
+                data["hash"] = hashlib.sha1(self._storage_id.to_bytes(8, "big")).hexdigest()
                 insert_stmt = insert(Auth).values(**data)
                 on_dupl_stmt = insert_stmt.on_duplicate_key_update(insert_stmt.inserted)
                 await session.execute(on_dupl_stmt)

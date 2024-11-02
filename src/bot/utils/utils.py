@@ -1,6 +1,8 @@
+import functools
 import random
 from string import ascii_letters, digits
 
+from aiogram import types
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,17 +33,20 @@ def get_volume_emoji(volume: int):
 async def get_menu_text(spotify: AsyncSpotify, session: Session, sql_session: AsyncSession):
     emoji_artists = '🥺🤫😐🙄😮😄😆🥹🙂😌😙😎😏🤩😋🥶🥵🤭🤔😈'
     curr_track = await spotify.get_curr_track()
+    image_url = curr_track.album.images[0].url
+
     num_of_users = await session.users_num(sql_session)
-    if curr_track is None:
-        text = f'🔥 людей в сессии: {num_of_users}'
-    else:
-        volume = spotify.volume
-        volume_str = f"{get_volume_emoji(volume)}: {volume}%\n\n" if spotify.is_playing else ""
-        artists, name = curr_track
-        text = (
-                f"🎧: {name}\n\n{''.join(random.choices(emoji_artists, k=len(artists)))}️: {', '.join(artists)}\n\n" + volume_str +
-                f"🔥 людей в сессии:"
-                f" {num_of_users}")
+
+    volume = spotify.volume
+    volume_str = f"{get_volume_emoji(volume)}: {volume}%\n\n" if spotify.is_playing else ""
+    artists, name = [artist.name for artist in curr_track.artists], curr_track.name
+    text = (
+        f'<a href="{image_url}"> </a>\n'
+        f'🎧: <b>{name}</b>\n\n'
+        f'<i>{"".join(random.choices(emoji_artists, k=len(artists)))}️: {", ".join(artists)}</i>\n\n'
+        f'{volume_str}'
+        f'🔥 людей в сессии:'
+        f' {num_of_users}')
     return text
 
 
@@ -77,3 +82,22 @@ async def get_curr_song_info(lyrics):
     name = name[:name.find('(')] if '(' in name else name
     name = name.strip()
     return '🔥 ' + artist + ' ' + name + ' 🔥\n\n'
+
+
+def save_users_last_message_id():
+    """
+    if wrapped function returns aiogram Message object, it saves its id to user object
+    """
+
+    def wrapper(function):
+        @functools.wraps(function)
+        async def wrapped(*args, **kwargs):
+            user = kwargs.get("user")
+
+            res = await function(*args, **kwargs)
+            if isinstance(res, types.Message):
+                user.last_message_id = res.message_id
+
+        return wrapped
+
+    return wrapper

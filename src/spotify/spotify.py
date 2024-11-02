@@ -14,7 +14,7 @@ from src.spotify.track_in_queue import TrackInQueue, TrackWithUser
 
 
 class AsyncSpotify:
-    _track_prefix = 'spotify%3Atrack%3A'
+    _track_prefix = 'spotify:track:'
     _album_prefix = 'spotify:album:'
     _playlist_prefix = 'spotify:playlist:'
     _artist_prefix = 'spotify:artist:'
@@ -148,7 +148,7 @@ class AsyncSpotify:
             await self.force_update()
 
     @error_wrapper()
-    async def get_curr_track(self) -> tuple[list[str], str]:
+    async def get_curr_track_data(self) -> tuple[list[str], str]:
         """
         get authors as str list and track name
         """
@@ -160,8 +160,13 @@ class AsyncSpotify:
         return artists, name
 
     @error_wrapper()
+    async def get_curr_track(self) -> asyncspotify.FullTrack:
+        await self.update()
+        return self._cached_currently_playing.track
+
+    @error_wrapper()
     async def get_lyrics(self):
-        artists, name = await self.get_curr_track()
+        artists, name = await self.get_curr_track_data()
         main_author = artists[0]
         name = name[:name.find('(')] if '(' in name else name
         name = name.strip()
@@ -176,6 +181,17 @@ class AsyncSpotify:
             self._last_song_lyrics = await self._lyrics_finder.find(main_author, name)
             return self._last_song_lyrics
 
+    async def has_cached_lyrics(self):
+        artists, name = await self.get_curr_track_data()
+        main_author = artists[0]
+        name = name[:name.find('(')] if '(' in name else name
+        name = name.strip()
+        if self._last_song_lyrics:
+            cached_artist, cached_song = self._last_song_lyrics.artist.lower(), self._last_song_lyrics.name.lower()
+            if main_author.lower() == cached_artist and cached_song == name.lower():
+                return True
+        return False
+
     @error_wrapper()
     async def add_track_to_queue(self, username: str, uri: str):
         if self._track_prefix not in uri:
@@ -185,11 +201,12 @@ class AsyncSpotify:
 
     def _sync_queue(self, spotify_queue: list[asyncspotify.SimpleTrack]):
         start_index = -1
-        first_spotify_track = spotify_queue[0]
+        spotify_top_track = spotify_queue[0]
         for index in range(len(self._users_queue)):
-            if self._users_queue[index].track_uri == first_spotify_track.uri:
+            if spotify_top_track.uri == self._users_queue[index].track_uri:
                 start_index = index
                 break
+
         if start_index == -1:
             self._users_queue = []
         else:
@@ -254,7 +271,6 @@ class AsyncSpotify:
         await asyncio.sleep(1)
         await self._session.player_volume(self._volume)
 
-    #TODO здесь лажа какая-то, метод не работает
     @error_wrapper()
     async def mute_unmute(self):
         if self._volume == 0:

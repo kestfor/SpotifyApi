@@ -14,7 +14,8 @@ from src.bot.handlers.error_handlers.handlers import handle_connection_error, er
 from src.bot.spotify_sessions import spotify_sessions
 from src.bot.utils.keyboards import get_menu_keyboard, get_admin_menu_keyboard, get_user_menu_keyboard, \
     get_settings_keyboard
-from src.bot.utils.utils import get_menu_text, get_queue_text, get_curr_song_info, get_lyrics_switcher
+from src.bot.utils.utils import get_menu_text, get_queue_text, get_curr_song_info, get_lyrics_switcher, \
+    save_users_last_message_id
 from src.spotify.spotify import AsyncSpotify
 from src.spotify.spotify import ConnectionError
 from src.sql.models.user import User
@@ -31,10 +32,10 @@ async def menu(callback: CallbackQuery, spotify: AsyncSpotify, user: User, sessi
         return
     if user.is_admin:
         keyboard = get_admin_menu_keyboard()
-        await callback.message.edit_text(text=text, reply_markup=keyboard)
+        await callback.message.edit_text(text=text, reply_markup=keyboard, parse_mode="HTML")
     else:
         keyboard = get_user_menu_keyboard()
-        await callback.message.edit_text(text=text, reply_markup=keyboard)
+        await callback.message.edit_text(text=text, reply_markup=keyboard, parse_mode="HTML")
 
 
 async def refresh(callback: CallbackQuery, spotify: AsyncSpotify, user: User, session: AsyncSession):
@@ -45,7 +46,6 @@ async def refresh(callback: CallbackQuery, spotify: AsyncSpotify, user: User, se
         await menu(callback, spotify, user, session)
 
 
-# TODO всегда выдает нет треков в очереди, где-то тут баг
 @router.callback_query(F.data == 'view_queue')
 @error_wrapper()
 async def view_queue(callback: CallbackQuery, user: User, session: AsyncSession):
@@ -64,6 +64,8 @@ async def view_queue(callback: CallbackQuery, user: User, session: AsyncSession)
 async def view_lyrics(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
     try:
+        if not await spotify.has_cached_lyrics():
+            await callback.message.edit_text("Ищу текст песни, подождите чуток, текст сейчас появится 😉", reply_markup=get_menu_keyboard())
         lyrics = await spotify.get_lyrics()
     except ValueError:
         await callback.message.edit_text("не удалось найти текст", reply_markup=get_menu_keyboard())
@@ -154,7 +156,7 @@ async def start_playlist(message: Message, user: User, session):
             reply_markup=get_menu_keyboard())
     else:
         await message.answer("плейлист успешно запущен", reply_markup=get_menu_keyboard())
-    await message.delete()
+    #await message.delete()
 
 
 @router.callback_query(F.data == "view_devices")
@@ -237,6 +239,7 @@ async def search_track_callback(callback: CallbackQuery):
 
 @router.message(F.text)
 @error_wrapper()
+@save_users_last_message_id()
 async def search_track_handler(message: Message, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
     list_of_results = await spotify.search(message.text)
@@ -249,8 +252,9 @@ async def search_track_handler(message: Message, user: User, session: AsyncSessi
         keyboard.button(text=song_info, callback_data=AddSongCallbackFactory(uri=raw_uri))
     keyboard.adjust(1)
     keyboard.row(InlineKeyboardButton(text='назад', callback_data='menu'))
-    await message.answer("выберите результат поиска 😊", reply_markup=keyboard.as_markup())
+    msg = await message.answer("выберите результат поиска 😊", reply_markup=keyboard.as_markup())
     await message.delete()
+    return msg
 
 
 @router.callback_query(AddSongCallbackFactory.filter())
@@ -277,9 +281,9 @@ async def start_pause_track(callback: CallbackQuery, bot: Bot, user: User, sessi
 @error_wrapper()
 async def next_track(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    old_track = await spotify.get_curr_track()
+    old_track = await spotify.get_curr_track_data()
     await spotify.next_track()
-    while old_track == await spotify.get_curr_track():
+    while old_track == await spotify.get_curr_track_data():
         await asyncio.sleep(0.5)
         await spotify.force_update()
     await menu(callback, spotify, user, session)
@@ -289,9 +293,9 @@ async def next_track(callback: CallbackQuery, user: User, session: AsyncSession)
 @error_wrapper()
 async def previous_track(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    old_track = await spotify.get_curr_track()
+    old_track = await spotify.get_curr_track_data()
     await spotify.previous_track()
-    while old_track == await spotify.get_curr_track():
+    while old_track == await spotify.get_curr_track_data():
         await asyncio.sleep(0.5)
         await spotify.force_update()
     await menu(callback, spotify, user, session)
@@ -316,7 +320,7 @@ async def end_session(callback: CallbackQuery, user: User, session: AsyncSession
         text='сессия завершена, для начала новой используйте команду "/start"',
         reply_markup=None)
     await asyncio.sleep(3)
-    await callback.message.delete()
+    #await callback.message.delete()
 
 
 @router.callback_query(F.data == 'increase_volume')
@@ -339,7 +343,7 @@ async def decrease_volume(callback: CallbackQuery, user: User, session: AsyncSes
 @error_wrapper()
 async def mute_volume(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    await spotify.increase_volume()
+    await spotify.mute_unmute()
     await menu(callback, spotify, user, session)
 
 
@@ -360,4 +364,4 @@ async def confirm_leave_session(callback: CallbackQuery, user: User, session: As
     await user.leave_session(session)
     await callback.message.edit_text(text='вы покинули сессию')
     await asyncio.sleep(3)
-    await callback.message.delete()
+   # await callback.message.delete()
