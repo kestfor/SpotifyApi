@@ -67,7 +67,7 @@ async def view_lyrics(callback: CallbackQuery, user: User, session: AsyncSession
         if not await spotify.has_cached_lyrics():
             await callback.message.edit_text("Ищу текст песни, подождите чуток, текст сейчас появится 😉", reply_markup=get_menu_keyboard())
         lyrics = await spotify.get_lyrics()
-    except ValueError:
+    except:
         await callback.message.edit_text("не удалось найти текст", reply_markup=get_menu_keyboard())
     else:
         song_info = await get_curr_song_info(lyrics)
