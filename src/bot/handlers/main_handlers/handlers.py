@@ -44,6 +44,8 @@ async def refresh(callback: CallbackQuery, spotify: AsyncSpotify, user: User, se
     curr_text = await get_menu_text(spotify, user.session, session)
     if old_text != curr_text:
         await menu(callback, spotify, user, session)
+    else:
+        await callback.answer()
 
 
 @router.callback_query(F.data == 'view_queue')
