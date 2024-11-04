@@ -33,9 +33,9 @@ async def add_user_to_session_handler(message: Message, state: FSMContext, user:
 
     music_session = await Session.get_by_id(session, token)
     if music_session:
-        await user.add_to_session(session, music_session.id)
+        await user.add_to_session(session, music_session)
         spotify = await spotify_sessions.get_or_create(user, session)
-        await message.answer(text=await get_menu_text(spotify, user.session, session),
+        await message.answer(text=await get_menu_text(spotify, user, session),
                              reply_markup=get_user_menu_keyboard(), parse_mode="HTML")
         # await message.delete()
         await state.clear()

@@ -44,7 +44,7 @@ async def view_qr(callback: CallbackQuery, bot: Bot, user: User, session: AsyncS
 @router.callback_query(F.data == 'back_from_qr')
 async def back_from_qr(callback: CallbackQuery, bot: Bot, session: AsyncSession, user: User):
     spotify = await spotify_sessions.get_or_create(user, session)
-    text = await get_menu_text(spotify, user.session, session)
+    text = await get_menu_text(spotify, user, session)
     if user.is_admin:
         markup = get_admin_menu_keyboard()
     else:

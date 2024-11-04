@@ -17,19 +17,19 @@ class Session(Base):
     id = mapped_column(BigInteger, primary_key=True)
     token = mapped_column(String(255))
 
-    user: Mapped['User'] = relationship(back_populates="session", lazy='selectin')
-
-    async def users_num(self, session: AsyncSession) -> int:
-        stmt = select(func.count()).select_from(self.__class__).where(self.id == self.__class__.id)
-        return (await session.execute(stmt)).scalar()
+    user: Mapped[list['User']] = relationship(back_populates="session", lazy='selectin')
 
     @classmethod
     async def get_by_id(cls, session: AsyncSession, session_id: int) -> Optional['Session']:
         return await session.get(cls, session_id)
 
+    async def users_num(self, session: AsyncSession) -> int:
+        stmt = select(user_model.User).where(user_model.User.session_id == self.id)
+        return len(list((await session.scalars(stmt))))
+
     async def get_users(self, session: AsyncSession) -> list['User']:
         stmt = select(user_model.User).where(user_model.User.session_id == self.id)
-        return (await session.execute(stmt)).scalars()
+        return list(await session.scalars(stmt))
 
     async def delete(self, session: AsyncSession) -> None:
         await session.delete(self)

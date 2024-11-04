@@ -26,7 +26,7 @@ router = Router()
 async def menu(callback: CallbackQuery, spotify: AsyncSpotify, user: User, session: AsyncSession):
     try:
         await spotify.update()
-        text = await get_menu_text(spotify, user.session, session)
+        text = await get_menu_text(spotify, user, session)
     except ConnectionError:
         await handle_connection_error(callback, user)
         return
@@ -41,7 +41,7 @@ async def menu(callback: CallbackQuery, spotify: AsyncSpotify, user: User, sessi
 async def refresh(callback: CallbackQuery, spotify: AsyncSpotify, user: User, session: AsyncSession):
     old_text = callback.message.text
     await spotify.update()
-    curr_text = await get_menu_text(spotify, user.session, session)
+    curr_text = await get_menu_text(spotify, user, session)
     if old_text != curr_text:
         await menu(callback, spotify, user, session)
     else:
@@ -354,7 +354,7 @@ async def leave_session(callback: CallbackQuery, user: User, session: AsyncSessi
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="✅", callback_data="confirm_leave_session"))
     builder.add(InlineKeyboardButton(text='❎', callback_data="menu"))
-    if not user.is_admin or (await user.session.users_num(session)) > 1:
+    if not user.is_admin or (await user.users_in_session_num(session)) > 1:
         await callback.message.edit_text(text='Вы уверены, что хотите покинуть сессию?',
                                          reply_markup=builder.as_markup())
     else:

@@ -2,7 +2,7 @@ python-dotenv
 pydantic-settings~=2.0.3
 aiogram>=3.0.0b7
 APScheduler~=3.10.4
-asyncspotify~=0.12.1
+asyncspotify>=0.12.1
 qrcode~=7.4.2
 lyricsgenius~=3.0.1
 beautifulsoup4~=4.9.1

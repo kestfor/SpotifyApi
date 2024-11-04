@@ -41,12 +41,19 @@ class User(Base):
         else:
             logging.warning(f"User {self.user_id} has no auth with hash {hash}")
 
-    async def add_to_session(self, session: AsyncSession, session_id: int):
-        session = await session.get(Session, session_id)
-        if session is not None:
-            self.session = session
+    async def add_to_session(self, session: AsyncSession, music_session: Session):
+        if music_session is not None:
+            self.session = music_session
+            self.session_id = music_session.id
+            await session.flush()
         else:
-            logging.warning(f"User {self.user_id} has no session {session_id}")
+            logging.warning(f"User {self.user_id} has no session music session")
+
+    async def users_in_session_num(self, session: AsyncSession) -> int:
+        if self.session_id is None:
+            return 0
+        stmt = select(User).where(User.session_id == self.session_id)
+        return len(list((await session.scalars(stmt))))
 
     async def leave_session(self, session: AsyncSession):
         self.session_id = None

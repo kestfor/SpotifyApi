@@ -11,6 +11,7 @@ from src.bot.callbacks_factory.factories import GetNextLyrics
 from src.spotify.spotify import AsyncSpotify
 from src.spotify.track_in_queue import TrackWithUser
 from src.sql.models.session import Session
+from src.sql.models.user import User
 
 
 def generate_token(length) -> str:
@@ -30,12 +31,12 @@ def get_volume_emoji(volume: int):
         return volumes[3]
 
 
-async def get_menu_text(spotify: AsyncSpotify, session: Session, sql_session: AsyncSession):
+async def get_menu_text(spotify: AsyncSpotify, user: User, sql_session: AsyncSession):
     emoji_artists = '🥺🤫😐🙄😮😄😆🥹🙂😌😙😎😏🤩😋🥶🥵🤭🤔😈'
     curr_track = await spotify.get_curr_track()
     image_url = curr_track.album.images[0].url
 
-    num_of_users = await session.users_num(sql_session)
+    num_of_users = await user.users_in_session_num(sql_session)
 
     volume = spotify.volume
     volume_str = f"{get_volume_emoji(volume)}: {volume}%\n\n" if spotify.is_playing else ""
