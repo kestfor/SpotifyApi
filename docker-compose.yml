@@ -22,7 +22,7 @@ services:
              python auth.py"
 
   refresh:
-    build: ,
+    build: .
     environment:
       PYTHONPATH: "/bots/SpotifyBot"
     command: >
