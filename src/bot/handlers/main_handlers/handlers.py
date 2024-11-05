@@ -69,7 +69,8 @@ async def view_lyrics(callback: CallbackQuery, user: User, session: AsyncSession
     spotify = await spotify_sessions.get_or_create(user, session)
     try:
         if not await spotify.has_cached_lyrics():
-            await callback.message.edit_text("Ищу текст песни, подождите чуток, текст сейчас появится 😉", reply_markup=get_menu_keyboard())
+            await callback.message.edit_text("Ищу текст песни, подождите чуток, текст сейчас появится 😉",
+                                             reply_markup=get_menu_keyboard())
         lyrics = await spotify.get_lyrics()
     except:
         await callback.message.edit_text("не удалось найти текст", reply_markup=get_menu_keyboard())
@@ -135,9 +136,9 @@ async def refresh_callback(callback: CallbackQuery, session: AsyncSession, user:
 @router.callback_query(F.data == "menu")
 @error_wrapper()
 async def menu_callback(callback: CallbackQuery, user: User, session: AsyncSession):
-    user.meta.screen = ScreenName.MAIN
     spotify = await spotify_sessions.get_or_create(user, session)
     await menu(callback, spotify, user, session)
+    user.meta.screen = ScreenName.MAIN
 
 
 @router.callback_query(F.data == 'start_playlist')
@@ -162,7 +163,7 @@ async def start_playlist(message: Message, user: User, session):
             reply_markup=get_menu_keyboard())
     else:
         await message.answer("плейлист успешно запущен", reply_markup=get_menu_keyboard())
-    #await message.delete()
+    # await message.delete()
 
 
 @router.callback_query(F.data == "view_devices")
@@ -324,7 +325,7 @@ async def end_session(callback: CallbackQuery, user: User, session: AsyncSession
         await spotify_sessions.clear_spotify(user.user_id)
         await notify_of_session_end(user, bot)
     await asyncio.sleep(3)
-    #await callback.message.delete()
+    # await callback.message.delete()
 
 
 @router.callback_query(F.data == 'increase_volume')
@@ -368,4 +369,4 @@ async def confirm_leave_session(callback: CallbackQuery, user: User, session: As
     await user.leave_session(session)
     await callback.message.edit_text(text='вы покинули сессию')
     await asyncio.sleep(3)
-   # await callback.message.delete()
+# await callback.message.delete()

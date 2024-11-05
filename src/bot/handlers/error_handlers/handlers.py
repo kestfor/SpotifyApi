@@ -22,7 +22,13 @@ def error_wrapper():
                     if isinstance(arg, CallbackQuery | Message):
                         arg1 = arg
                 await handle_premium_required_error(arg1)
-            except ConnectionError:
+            except UnsupportedDevice:
+                arg1 = None
+                for arg in args:
+                    if isinstance(arg, CallbackQuery):
+                        arg1 = arg
+                await handle_not_supported_device(arg1)
+            except Exception:
                 arg1 = arg2 = arg3 = None
                 for arg in args:
                     if isinstance(arg, Message | CallbackQuery):
@@ -32,12 +38,6 @@ def error_wrapper():
                     if isinstance(arg, Bot):
                         arg3 = arg
                 await handle_connection_error(arg1, arg2, arg3)
-            except UnsupportedDevice:
-                arg1 = None
-                for arg in args:
-                    if isinstance(arg, CallbackQuery):
-                        arg1 = arg
-                await handle_not_supported_device(arg1)
             return res
 
         return wrapped
