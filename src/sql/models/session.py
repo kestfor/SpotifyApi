@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import BigInteger, String, select, func
+from sqlalchemy import BigInteger, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import mapped_column, Mapped, relationship
 
@@ -22,6 +22,11 @@ class Session(Base):
     @classmethod
     async def get_by_id(cls, session: AsyncSession, session_id: int) -> Optional['Session']:
         return await session.get(cls, session_id)
+
+    @classmethod
+    async def get_all(cls, sql_session: AsyncSession) -> list['Session']:
+        stmt = select(cls)
+        return list(await sql_session.scalars(stmt))
 
     async def users_num(self, session: AsyncSession) -> int:
         stmt = select(user_model.User).where(user_model.User.session_id == self.id)

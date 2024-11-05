@@ -3,6 +3,7 @@ from typing import Callable, Dict, Any, Awaitable
 from aiogram import BaseMiddleware, types, Bot
 from aiogram.types import Update
 
+from src.sql.models.meta import ScreenName
 from src.sql.models.user import User
 
 
@@ -43,5 +44,6 @@ class UserMiddleware(BaseMiddleware):
                     user.last_message_id = event.message.message_id
 
             data["user"] = user
+            user.meta.screen = ScreenName.EMPTY
 
             return await handler(event, data)

@@ -16,7 +16,7 @@ router = Router()
 
 @router.callback_query(F.data == 'view_token')
 async def view_token(callback: CallbackQuery, user: User, session: AsyncSession):
-    master = await user.get_admin(session)
+    master = await user.get_master(session)
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="назад", callback_data="get_settings"))
     await callback.message.edit_text(f"token: <code>{master.token}</code>", reply_markup=builder.as_markup(),
@@ -26,7 +26,7 @@ async def view_token(callback: CallbackQuery, user: User, session: AsyncSession)
 @router.callback_query(F.data == 'view_qr')
 @save_users_last_message_id()
 async def view_qr(callback: CallbackQuery, bot: Bot, user: User, session: AsyncSession):
-    master = await user.get_admin(session)
+    master = await user.get_master(session)
     url = f"t.me/SpotifyShareControlBot?start=_token_{master.token}"
     img = qrcode.make(url)
     qr_file_name = f"qr_{master.user_id}"
@@ -45,7 +45,7 @@ async def view_qr(callback: CallbackQuery, bot: Bot, user: User, session: AsyncS
 async def back_from_qr(callback: CallbackQuery, bot: Bot, session: AsyncSession, user: User):
     spotify = await spotify_sessions.get_or_create(user, session)
     text = await get_menu_text(spotify, user, session)
-    if user.is_admin:
+    if user.is_master:
         markup = get_admin_menu_keyboard()
     else:
         markup = get_user_menu_keyboard()
@@ -56,7 +56,7 @@ async def back_from_qr(callback: CallbackQuery, bot: Bot, session: AsyncSession,
 
 @router.callback_query(F.data == 'view_url')
 async def view_url(callback: CallbackQuery, user: User, session: AsyncSession):
-    master = await user.get_admin(session)
+    master = await user.get_master(session)
     url = f"t.me/SpotifyShareControlBot?start=_token_{master.token}"
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="назад", callback_data="get_settings"))

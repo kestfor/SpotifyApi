@@ -19,6 +19,7 @@ from src.bot.utils.utils import get_menu_text, get_queue_text, get_curr_song_inf
     save_users_last_message_id, notify_of_session_end
 from src.spotify.spotify import AsyncSpotify
 from src.spotify.spotify import ConnectionError
+from src.sql.models.meta import ScreenName
 from src.sql.models.user import User
 
 router = Router()
@@ -31,7 +32,7 @@ async def menu(callback: CallbackQuery, spotify: AsyncSpotify, user: User, sessi
     except ConnectionError:
         await handle_connection_error(callback, user)
         return
-    if user.is_admin:
+    if user.is_master:
         keyboard = get_admin_menu_keyboard()
         await callback.message.edit_text(text=text, reply_markup=keyboard, parse_mode="HTML")
     else:
@@ -134,6 +135,7 @@ async def refresh_callback(callback: CallbackQuery, session: AsyncSession, user:
 @router.callback_query(F.data == "menu")
 @error_wrapper()
 async def menu_callback(callback: CallbackQuery, user: User, session: AsyncSession):
+    user.meta.screen = ScreenName.MAIN
     spotify = await spotify_sessions.get_or_create(user, session)
     await menu(callback, spotify, user, session)
 
@@ -354,7 +356,7 @@ async def leave_session(callback: CallbackQuery, user: User, session: AsyncSessi
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="✅", callback_data="confirm_leave_session"))
     builder.add(InlineKeyboardButton(text='❎', callback_data="menu"))
-    if not user.is_admin and (await user.users_in_session_num(session)) > 1:
+    if not user.is_master and (await user.users_in_session_num(session)) > 1:
         await callback.message.edit_text(text='Вы уверены, что хотите покинуть сессию?',
                                          reply_markup=builder.as_markup())
     else:

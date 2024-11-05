@@ -20,8 +20,15 @@ services:
       sh -c "ls
              cd ./src/auth_service
              python auth.py"
-  
 
+  refresh:
+    build: ,
+    environment:
+      PYTHONPATH: "/bots/SpotifyBot"
+    command: >
+      sh -c "ls
+             cd ./src/refresh_service
+             python service.py"
 
 volumes:
   pgdata:

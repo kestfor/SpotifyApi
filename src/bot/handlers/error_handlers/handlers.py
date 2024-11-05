@@ -66,7 +66,7 @@ async def handle_connection_error(callback: CallbackQuery | Message, user: User 
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="обновить", callback_data="refresh"))
     builder.row(InlineKeyboardButton(text='покинуть сессию', callback_data='leave_session'))
-    if user is not None and user.is_admin:
+    if user is not None and user.is_master:
         builder.row(InlineKeyboardButton(text='завершить сессию', callback_data="confirm_end_session"))
     if bot is None:
         if isinstance(callback, CallbackQuery):

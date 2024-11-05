@@ -32,11 +32,11 @@ def get_settings_keyboard(user: User):
     builder.row(InlineKeyboardButton(text='ссылка приглашение', callback_data="view_url"))
     builder.row(InlineKeyboardButton(text='QR-код', callback_data="view_qr"))
     builder.row(InlineKeyboardButton(text="сменить устройство", callback_data="view_devices"))
-    if user.is_admin:
+    if user.is_master:
         builder.row(InlineKeyboardButton(text='изменить режим', callback_data="change_mode"))
         # builder.row(InlineKeyboardButton(text='добавить админа', callback_data="view_admins_to_add"))
     builder.row(InlineKeyboardButton(text='покинуть сессию', callback_data="leave_session"))
-    if user.is_admin:
+    if user.is_master:
         builder.row(InlineKeyboardButton(text="завершить сессию", callback_data="confirm_end_session"))
     builder.row(InlineKeyboardButton(text='назад', callback_data="menu"))
     return builder.as_markup()

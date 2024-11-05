@@ -10,7 +10,7 @@ class SpotifySessions:
         self._sessions: dict[int, AsyncSpotify] = {}
 
     async def get_or_create(self, user: User, session: AsyncSession) -> AsyncSpotify:
-        master = await user.get_admin(session)
+        master = await user.get_master(session)
         if not master:
             master = user
         if master.user_id not in self._sessions:
