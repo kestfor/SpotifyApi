@@ -4,7 +4,8 @@ from aiogram import Bot
 from aiogram.types import CallbackQuery, Message, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from src.spotify.spotify_errors import PremiumRequired, ConnectionError
+from src.bot.utils.keyboards import get_menu_keyboard
+from src.spotify.spotify_errors import PremiumRequired, ConnectionError, UnsupportedDevice
 from src.sql.models.user import User
 
 
@@ -31,11 +32,22 @@ def error_wrapper():
                     if isinstance(arg, Bot):
                         arg3 = arg
                 await handle_connection_error(arg1, arg2, arg3)
+            except UnsupportedDevice:
+                arg1 = None
+                for arg in args:
+                    if isinstance(arg, CallbackQuery):
+                        arg1 = arg
+                await handle_not_supported_device(arg1)
             return res
 
         return wrapped
 
     return wrapper
+
+
+async def handle_not_supported_device(callback: CallbackQuery):
+    await callback.message.edit_text("текущее устройство воспроизведения не поддерживает данный функционал",
+                                     reply_markup=get_menu_keyboard())
 
 
 async def handle_premium_required_error(callback: CallbackQuery | Message):

@@ -245,12 +245,12 @@ async def search_track_callback(callback: CallbackQuery):
 @save_users_last_message_id()
 async def search_track_handler(message: Message, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
-    list_of_results = await spotify.search(message.text)
+    list_of_results = await spotify.search_track(message.text)
     keyboard = InlineKeyboardBuilder()
     request = {}
     for item in list_of_results:
-        song_info = ' - '.join(item[0:2])
-        raw_uri = item[-1]
+        song_info = f'{item.artists[0].name} - {item.name}'
+        raw_uri = item.id
         request[raw_uri] = song_info
         keyboard.button(text=song_info, callback_data=AddSongCallbackFactory(uri=raw_uri))
     keyboard.adjust(1)
