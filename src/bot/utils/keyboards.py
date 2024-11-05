@@ -19,7 +19,7 @@ def get_admin_menu_keyboard():
     builder.row(InlineKeyboardButton(text='🔉', callback_data='decrease_volume'))
     builder.add(InlineKeyboardButton(text='🔇', callback_data='mute_volume'))
     builder.add(InlineKeyboardButton(text='🔊', callback_data="increase_volume"))
-    builder.row(InlineKeyboardButton(text="🔄 обновить 🔄", callback_data='refresh'))
+    #builder.row(InlineKeyboardButton(text="🔄 обновить 🔄", callback_data='refresh'))
     builder.row(InlineKeyboardButton(text="⏮", callback_data="previous_track"))
     builder.add(InlineKeyboardButton(text="⏯", callback_data="start_pause"))
     builder.add(InlineKeyboardButton(text="⏭", callback_data="next_track"))
@@ -52,7 +52,7 @@ def get_user_menu_keyboard():
     builder.row(InlineKeyboardButton(text='🔉', callback_data='decrease_volume'))
     builder.add(InlineKeyboardButton(text='🔇', callback_data='mute_volume'))
     builder.add(InlineKeyboardButton(text='🔊', callback_data="increase_volume"))
-    builder.row(InlineKeyboardButton(text="🔄обновить🔄", callback_data='refresh'))
+    #builder.row(InlineKeyboardButton(text="🔄обновить🔄", callback_data='refresh'))
     # if db.mode == db.share_mode:
     builder.row(InlineKeyboardButton(text="⏮", callback_data="previous_track"))
     builder.add(InlineKeyboardButton(text="⏯", callback_data="start_pause"))
