@@ -1,4 +1,5 @@
 import hashlib
+import logging
 
 from asyncspotify import AuthorizationCodeFlow, Scope
 from asyncspotify.oauth.response import AuthorizationCodeFlowResponse
@@ -60,8 +61,10 @@ class DatabaseAuth(AuthorizationCodeFlow):
                 insert_stmt = insert(Auth).values(**data)
                 on_dupl_stmt = insert_stmt.on_duplicate_key_update(insert_stmt.inserted)
                 await session.execute(on_dupl_stmt)
+
+            self._data = self.response_class.from_data(data)
         except Exception as e:
-            print(e)
+            logging.critical(e)
 
     def access_token(self):
         return self._data.access_token

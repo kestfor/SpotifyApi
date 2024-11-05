@@ -1,8 +1,11 @@
+import asyncio
 import functools
 import random
 from string import ascii_letters, digits
 
+import aiogram
 from aiogram import types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -102,3 +105,16 @@ def save_users_last_message_id():
         return wrapped
 
     return wrapper
+
+
+async def notify_of_session_end(user: User, bot: aiogram.Bot):
+    try:
+        await bot.delete_message(user.user_id, user.last_message_id)
+        user.last_message_id = None
+    except TelegramBadRequest:
+        pass
+    finally:
+        pass
+        # msg = await bot.send_message(user.user_id, "сессия завершена")
+        # user.last_message_id = msg.message_id
+        # await asyncio.sleep(3)

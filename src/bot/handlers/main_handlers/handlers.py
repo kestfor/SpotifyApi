@@ -1,5 +1,6 @@
 import asyncio
 
+import aiogram
 from aiogram import F, Bot
 from aiogram.dispatcher.router import Router
 from aiogram.fsm.context import FSMContext
@@ -15,7 +16,7 @@ from src.bot.spotify_sessions import spotify_sessions
 from src.bot.utils.keyboards import get_menu_keyboard, get_admin_menu_keyboard, get_user_menu_keyboard, \
     get_settings_keyboard
 from src.bot.utils.utils import get_menu_text, get_queue_text, get_curr_song_info, get_lyrics_switcher, \
-    save_users_last_message_id
+    save_users_last_message_id, notify_of_session_end
 from src.spotify.spotify import AsyncSpotify
 from src.spotify.spotify import ConnectionError
 from src.sql.models.user import User
@@ -313,14 +314,12 @@ async def confirm_end_session(callback: CallbackQuery):
 
 
 @router.callback_query(F.data == 'end_session')
-async def end_session(callback: CallbackQuery, user: User, session: AsyncSession):
+async def end_session(callback: CallbackQuery, user: User, session: AsyncSession, bot: aiogram.Bot):
     users = await user.session.get_users(session)
-    for user in users:
-        await spotify_sessions.clear_spotify(user)
     await user.session.delete(session)
-    await callback.message.edit_text(
-        text='сессия завершена, для начала новой используйте команду "/start"',
-        reply_markup=None)
+    for user in users:
+        await spotify_sessions.clear_spotify(user.user_id)
+        await notify_of_session_end(user, bot)
     await asyncio.sleep(3)
     #await callback.message.delete()
 
@@ -354,7 +353,7 @@ async def leave_session(callback: CallbackQuery, user: User, session: AsyncSessi
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="✅", callback_data="confirm_leave_session"))
     builder.add(InlineKeyboardButton(text='❎', callback_data="menu"))
-    if not user.is_admin or (await user.users_in_session_num(session)) > 1:
+    if not user.is_admin and (await user.users_in_session_num(session)) > 1:
         await callback.message.edit_text(text='Вы уверены, что хотите покинуть сессию?',
                                          reply_markup=builder.as_markup())
     else:
