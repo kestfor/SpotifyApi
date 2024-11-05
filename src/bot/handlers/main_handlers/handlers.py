@@ -282,6 +282,7 @@ async def start_pause_track(callback: CallbackQuery, bot: Bot, user: User, sessi
     except ConnectionError:
         pass
     await menu(callback, spotify, user, session)
+    user.meta.screen = ScreenName.MAIN
 
 
 @router.callback_query(F.data == 'next_track')
@@ -294,6 +295,7 @@ async def next_track(callback: CallbackQuery, user: User, session: AsyncSession)
         await asyncio.sleep(0.5)
         await spotify.force_update()
     await menu(callback, spotify, user, session)
+    user.meta.screen = ScreenName.MAIN
 
 
 @router.callback_query(F.data == 'previous_track')
@@ -306,6 +308,7 @@ async def previous_track(callback: CallbackQuery, user: User, session: AsyncSess
         await asyncio.sleep(0.5)
         await spotify.force_update()
     await menu(callback, spotify, user, session)
+    user.meta.screen = ScreenName.MAIN
 
 
 @router.callback_query(F.data == 'confirm_end_session')
@@ -334,6 +337,7 @@ async def increase_volume(callback: CallbackQuery, user: User, session: AsyncSes
     spotify = await spotify_sessions.get_or_create(user, session)
     await spotify.increase_volume()
     await menu(callback, spotify, user, session)
+    user.meta.screen = ScreenName.MAIN
 
 
 @router.callback_query(F.data == 'decrease_volume')
@@ -342,6 +346,7 @@ async def decrease_volume(callback: CallbackQuery, user: User, session: AsyncSes
     spotify = await spotify_sessions.get_or_create(user, session)
     await spotify.decrease_volume()
     await menu(callback, spotify, user, session)
+    user.meta.screen = ScreenName.MAIN
 
 
 @router.callback_query(F.data == 'mute_volume')
@@ -350,6 +355,7 @@ async def mute_volume(callback: CallbackQuery, user: User, session: AsyncSession
     spotify = await spotify_sessions.get_or_create(user, session)
     await spotify.mute_unmute()
     await menu(callback, spotify, user, session)
+    user.meta.screen = ScreenName.MAIN
 
 
 @router.callback_query(F.data == 'leave_session')
