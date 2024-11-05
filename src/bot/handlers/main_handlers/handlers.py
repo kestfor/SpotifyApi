@@ -132,6 +132,7 @@ async def refresh_callback(callback: CallbackQuery, session: AsyncSession, user:
 
 
 @router.callback_query(F.data == "menu")
+@error_wrapper()
 async def menu_callback(callback: CallbackQuery, user: User, session: AsyncSession):
     spotify = await spotify_sessions.get_or_create(user, session)
     await menu(callback, spotify, user, session)
