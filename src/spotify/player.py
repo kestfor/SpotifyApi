@@ -30,6 +30,7 @@ class SpotifyPlayer:
 
     async def mute_unmute(self):
         try:
+            await self.set_volume(self.volume)
             self._device.volume_percent = next(self._gen)
             await self.set_volume(self.volume)
         except HTTPException:
