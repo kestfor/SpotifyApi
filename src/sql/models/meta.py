@@ -25,7 +25,7 @@ class Meta(Base):
 
     user_id = mapped_column(ForeignKey('user.user_id'), primary_key=True)
     last_message_id = mapped_column(BigInteger)
-    screen = mapped_column(screen_name, nullable=False)
+    screen = mapped_column(screen_name, nullable=False, default=ScreenName.EMPTY)
 
     user: Mapped['User'] = relationship(back_populates='meta', lazy='selectin')
 
