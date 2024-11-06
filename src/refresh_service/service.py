@@ -2,13 +2,12 @@ import asyncio
 import logging
 
 from aiogram import Bot
-from aiohttp import ClientSession
 
 from src.env import BOT_TOKEN
 from src.refresh_service.refresh_functions import update_all_sessions
 from src.sql.engine import async_session
 
-REFRESH_TIMEOUT = 5
+REFRESH_TIMEOUT = 30
 
 
 async def main():
@@ -23,6 +22,7 @@ async def main():
         except Exception as e:
             logging.error(e)
             await asyncio.sleep(REFRESH_TIMEOUT)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
