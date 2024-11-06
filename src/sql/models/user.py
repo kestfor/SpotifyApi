@@ -39,11 +39,12 @@ class User(Base):
 
     @classmethod
     async def get_or_create(cls, session: AsyncSession, user_id: int, username: str = None):
-        await Meta.get_or_create(session, user_id)
         obj = await session.get(cls, user_id)
         if not obj:
             obj = cls(user_id=user_id, username=username)
             session.add(obj)
+            meta = await Meta.get_or_create(session, user_id)
+            obj.meta = meta
             await session.flush()
         return obj
 
