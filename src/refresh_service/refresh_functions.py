@@ -1,5 +1,6 @@
 import asyncio
 import random
+import time
 
 import aiogram
 from aiogram.exceptions import TelegramBadRequest
@@ -45,12 +46,12 @@ async def refresh(curr_track, volume, is_playing, num_of_users, user: User, bot:
                                     chat_id=user.user_id,
                                     text=text, reply_markup=keyboard,
                                     parse_mode="HTML")
-        print(f"screen for user {user} updated")
     except TelegramBadRequest as error:
         print(error)
 
 
 async def update_session(music_session: Session, sql_session: AsyncSession, bot: aiogram.Bot):
+    start = time.time()
     users = await music_session.get_users(sql_session)
     master = await users[0].get_master(sql_session)
     spotify: AsyncSpotify = await spotify_sessions.get_or_create(master, sql_session)
@@ -67,6 +68,7 @@ async def update_session(music_session: Session, sql_session: AsyncSession, bot:
     for user in users:
         tasks.append(asyncio.create_task(refresh(curr_track, volume, is_playing, num_of_users, user, bot)))
     await asyncio.gather(*tasks)
+    print(f"session {music_session.id} updated in {time.time() - start} seconds")
 
 
 async def update_all_sessions(sql_session: AsyncSession, bot: aiogram.Bot):
