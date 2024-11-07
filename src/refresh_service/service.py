@@ -7,7 +7,7 @@ from src.env import BOT_TOKEN
 from src.refresh_service.refresh_functions import update_all_sessions
 from src.sql.engine import async_session, get_session
 
-REFRESH_TIMEOUT = 30
+REFRESH_TIMEOUT = 5
 
 
 async def main():

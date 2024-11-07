@@ -8,9 +8,11 @@ from src.spotify.spotify_errors import UnsupportedDevice
 class SpotifyPlayer:
 
     @staticmethod
-    async def get_player(session: Client) -> 'SpotifyPlayer':
+    async def get_player(session: Client) -> Optional['SpotifyPlayer']:
         player = SpotifyPlayer(session)
         player._spotify_player = await session.get_player()
+        if player._spotify_player is None:
+            return None
         player._device = player._spotify_player.device
         return player
 

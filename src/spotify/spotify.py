@@ -82,11 +82,13 @@ class AsyncSpotify:
         if not self._authorized:
             await self._session.authorize(storage_id)
         try:
-            self._player = await SpotifyPlayer.get_player(self._session)
             self._authorized = True
-        except Exception as e:
-            print(e)
-        except asyncspotify.exceptions.NotFound:
+            self._player = await SpotifyPlayer.get_player(self._session)
+
+            if self._player is None:
+                raise ConnectionError("there is no active device")
+
+        except Exception:
             raise ConnectionError("there is no active device")
 
     async def start_playlist(self, url: str):
@@ -113,9 +115,14 @@ class AsyncSpotify:
     @error_wrapper()
     async def force_update(self):
         """forcing to update"""
+        if self._player is None:
+            self._player = await SpotifyPlayer.get_player(self._session)
+
+        if self._player is None:
+            raise ConnectionError("there is no active device")
+
         self._cached_currently_playing = await self._session.player_currently_playing()
 
-    @error_wrapper()
     async def update(self):
         """updates only after some time has passed"""
         now = time.time()

@@ -7,6 +7,7 @@ import aiogram
 from asyncspotify import FullTrack
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.bot.spotify_sessions import spotify_sessions
 from src.bot.utils.keyboards import get_admin_menu_keyboard, get_user_menu_keyboard
 from src.bot.utils.utils import get_volume_emoji
 from src.spotify.spotify import AsyncSpotify
@@ -61,8 +62,7 @@ async def update_session(music_session: Session, sql_session: AsyncSession, bot:
     start = time.time()
     users = await music_session.get_users(sql_session)
     master = await users[0].get_master(sql_session)
-    spotify: AsyncSpotify = AsyncSpotify()
-    await spotify.authorize(master.auth_id)
+    spotify: AsyncSpotify = await spotify_sessions.get_or_create(master, sql_session)
     try:
         curr_track = await spotify.get_curr_track()
     except Exception as error:
