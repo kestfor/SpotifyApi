@@ -62,7 +62,12 @@ async def update_session(music_session: Session, sql_session: AsyncSession, bot:
     start = time.time()
     users = await music_session.get_users(sql_session)
     master = await users[0].get_master(sql_session)
-    spotify: AsyncSpotify = await spotify_sessions.get_or_create(master, sql_session)
+
+    if master.auth_id is None:
+        logging.critical("master is not authorized")
+        return
+
+    spotify: AsyncSpotify = AsyncSpotify(master.auth_id)
     try:
         curr_track = await spotify.get_curr_track()
     except Exception as error:
@@ -82,7 +87,7 @@ async def update_session(music_session: Session, sql_session: AsyncSession, bot:
         if time_left < TIME_OUT_SECONDS:
             await asyncio.sleep(TIME_OUT_SECONDS - time_left)
     await spotify.close()
-    print(f"session {music_session.id} updated in {time.time() - start} seconds")
+    logging.info(f"session {music_session.id} updated in {time.time() - start} seconds")
 
 
 async def update_all_sessions(sql_session: AsyncSession, bot: aiogram.Bot):
