@@ -68,6 +68,7 @@ async def update_session(music_session: Session, sql_session: AsyncSession, bot:
         return
 
     spotify: AsyncSpotify = AsyncSpotify(master.auth_id)
+    await spotify.authorize()
     try:
         curr_track = await spotify.get_curr_track()
     except Exception as error:

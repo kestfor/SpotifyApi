@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 
 from aiogram import Bot
 
@@ -9,6 +10,12 @@ from src.sql.engine import async_session, get_session
 
 REFRESH_TIMEOUT = 30
 
+logging.basicConfig(level=logging.DEBUG,
+                    format="%(asctime)s - %(levelname)s - %(filename)s %(funcName)s: %(lineno)d - %(message)s",
+                    handlers=[
+                        # logging.FileHandler("../../log.log", encoding="utf-8"),
+                        logging.StreamHandler(sys.stdout)
+                    ])
 
 async def main():
     token = BOT_TOKEN
