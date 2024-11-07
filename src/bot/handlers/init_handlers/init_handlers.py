@@ -9,6 +9,7 @@ from src.bot.handlers.connect_user_to_session_route.connection_route import add_
 from src.bot.spotify_sessions import spotify_sessions
 from src.bot.start_arg import StartArg
 from src.bot.utils.keyboards import get_menu_keyboard
+from src.spotify.spotify import AsyncSpotify
 from src.sql.models.user import User
 
 router = Router()
@@ -63,9 +64,8 @@ async def start_by_command(message: Message, command: CommandObject, state: FSMC
 @router.callback_query(F.data == 'start_session')
 async def start_session(callback: CallbackQuery, user: User, session: AsyncSession):
     if not user.authorized:
-        spotify = await spotify_sessions.get_or_create(user, session)
         await callback.message.edit_text(
-            f"Перейдите по ссылке для авторизации: {await spotify.create_authorize_route()}\n")
+            f"Перейдите по ссылке для авторизации: {AsyncSpotify.create_authorize_route()}\n")
         return
 
     music_session = await user.create_session(session, str(user.user_id))
@@ -77,8 +77,9 @@ async def start_session(callback: CallbackQuery, user: User, session: AsyncSessi
 
 @router.callback_query(F.data == "connect_spotify_account")
 async def connect_spotify_account(callback: CallbackQuery, user: User, session: AsyncSession):
-    spotify = await spotify_sessions.get_or_create(user, session)
-    spotify.deauthorize()
+    if user.authorized:
+        spotify = await spotify_sessions.get_or_create(user, session)
+        spotify.deauthorize()
     await callback.message.edit_text(
-        f"Перейдите по ссылке для авторизации: {await spotify.create_authorize_route()}\n")
+        f"Перейдите по ссылке для авторизации: {AsyncSpotify.create_authorize_route()}\n")
     return

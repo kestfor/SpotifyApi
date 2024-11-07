@@ -6,19 +6,20 @@ from asyncspotify.oauth.response import AuthorizationCodeFlowResponse
 from sqlalchemy.dialects.mysql import insert
 
 from src.spotify.spotify_errors import *
-from src.sql.engine import async_session
+from src.sql.engine import async_session, get_session
 from src.sql.models.auth import Auth
 
 
 class DatabaseAuth(AuthorizationCodeFlow):
 
-    def __init__(self, client_id, client_secret, storage_id: int = None, scope=Scope.none(),
+    def __init__(self, client_id, client_secret, redirect_uri: str = "http://localhost/", storage_id: int = None,
+                 scope=Scope.none(),
                  response_class=AuthorizationCodeFlowResponse):
-        super().__init__(client_id, client_secret, scope, 'http://localhost/', response_class)
+        super().__init__(client_id, client_secret, scope, redirect_uri, response_class)
         self._storage_id = storage_id
 
-    async def authorize(self, storage_id=None):
-        data = await self.load(storage_id)
+    async def authorize(self):
+        data = await self.load()
         self._data = data
 
         # refresh it now if it's expired
@@ -28,8 +29,8 @@ class DatabaseAuth(AuthorizationCodeFlow):
             # manually start refresh task if we didn't refresh on startup
             self.refresh_in(self._data.seconds_until_expire())
 
-    async def setup(self, storage_id=None):
-        return await self.load(storage_id)
+    async def setup(self):
+        return await self.load()
 
     @property
     def storage_id(self):
@@ -39,8 +40,7 @@ class DatabaseAuth(AuthorizationCodeFlow):
     def storage_id(self, value):
         self._storage_id = value
 
-    async def load(self, storage_id=None):
-        self._storage_id = storage_id
+    async def load(self):
         """load data from database"""
 
         if self._storage_id is None:
@@ -52,17 +52,19 @@ class DatabaseAuth(AuthorizationCodeFlow):
                 return self.response_class.from_data(data.as_dict())
 
     async def store(self, response):
+        if self._storage_id is None:
+            raise AuthorizationError("storage_id is required")
         """simply store the response to db"""
         try:
-            async with async_session() as session:
+            async with get_session() as session:
                 data = response.to_dict()
                 data["id"] = self._storage_id
                 data["hash"] = hashlib.sha1(self._storage_id.to_bytes(8, "big")).hexdigest()
                 insert_stmt = insert(Auth).values(**data)
                 on_dupl_stmt = insert_stmt.on_duplicate_key_update(insert_stmt.inserted)
                 await session.execute(on_dupl_stmt)
+                await session.flush()
 
-            self._data = self.response_class.from_data(data)
         except Exception as e:
             logging.critical(e)
 

@@ -35,27 +35,23 @@ class AsyncSpotify:
     #         res.append([i.artists[0].name, i.name, i.id])
     #     return res
 
+    _auth = DatabaseAuth(
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        scope=asyncspotify.Scope(user_modify_playback_state=True, user_read_playback_state=True),
+        redirect_uri=SPOTIFY_REDIRECT_URI,
+    )
+
     @staticmethod
     def get_full_uri(uri: str):
         if uri.find(AsyncSpotify._track_prefix) == -1:
             return AsyncSpotify._track_prefix + uri
 
-    def __init__(self):
-        self._client_id = SPOTIFY_CLIENT_ID
-        self._client_secret = SPOTIFY_CLIENT_SECRET
-        self._scope = asyncspotify.Scope(user_modify_playback_state=True, user_read_playback_state=True)
+    def __init__(self, auth_id: int):
         self._lyrics_finder = LyricsFinder()
         self._last_song_lyrics: Lyrics | None = None
-
-        self._auth = DatabaseAuth(
-            client_id=self._client_id,
-            client_secret=self._client_secret,
-            scope=self._scope,
-        )
-        self._auth.redirect_uri = SPOTIFY_REDIRECT_URI
-
         self._player: Optional[SpotifyPlayer] = None
-
+        self._auth.storage_id = auth_id
         self._session = ModifiedClient(self._auth)
         self._cached_currently_playing: asyncspotify.CurrentlyPlaying | None = None
         self._last_update_time = 0
@@ -72,21 +68,26 @@ class AsyncSpotify:
     def closed(self) -> bool:
         return self._closed
 
-    async def create_authorize_route(self) -> str:
-        return self._session.auth.create_authorize_route()
+    @classmethod
+    def create_authorize_route(cls) -> str:
+        return cls._auth.create_authorize_route()
 
     def deauthorize(self):
         self._authorized = False
 
-    async def authorize(self, storage_id):
+    async def authorize(self, storage_id: int = None):
         if not self._authorized:
-            await self._session.authorize(storage_id)
+            if storage_id is not None and isinstance(storage_id, int):
+                self._auth.storage_id = storage_id
         try:
-            self._authorized = True
+            await self._session.authorize()
+        except Exception as e:
+            raise AuthorizationError(f"can't authorize with storage_id {storage_id}") from e
+        try:
             self._player = await SpotifyPlayer.get_player(self._session)
-
             if self._player is None:
                 raise ConnectionError("there is no active device")
+            self._authorized = True
 
         except Exception:
             raise ConnectionError("there is no active device")
@@ -115,12 +116,6 @@ class AsyncSpotify:
     @error_wrapper()
     async def force_update(self):
         """forcing to update"""
-        if self._player is None:
-            self._player = await SpotifyPlayer.get_player(self._session)
-
-        if self._player is None:
-            raise ConnectionError("there is no active device")
-
         self._cached_currently_playing = await self._session.player_currently_playing()
 
     async def update(self):

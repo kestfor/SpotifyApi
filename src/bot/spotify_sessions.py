@@ -1,3 +1,4 @@
+from redis.exceptions import AuthorizationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.spotify.spotify import AsyncSpotify
@@ -13,13 +14,18 @@ class SpotifySessions:
         master = await user.get_master(session)
         if not master:
             master = user
-        if master.user_id not in self._sessions:
-            self._sessions[master.user_id] = AsyncSpotify()
 
         auth_id = master.auth_id
+
+        if auth_id is None:
+            raise AuthorizationError(f"user {master} was not authorized")
+
+        if master.user_id not in self._sessions:
+            self._sessions[master.user_id] = AsyncSpotify(auth_id)
+
         spotify = self._sessions[master.user_id]
-        if not spotify.authorized and auth_id is not None:
-            await spotify.authorize(storage_id=auth_id)
+        if not spotify.authorized:
+            await spotify.authorize()
         return spotify
 
     async def clear_spotify(self, user_id):

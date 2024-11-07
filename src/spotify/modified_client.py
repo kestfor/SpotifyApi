@@ -11,8 +11,8 @@ class ModifiedClient(asyncspotify.client.Client):
         self.auth: DatabaseAuth = auth(self)
         self.http: ModifiedHTTP = ModifiedHTTP(self)
 
-    async def authorize(self, storage_id=None):
-        await self.auth.authorize(storage_id)
+    async def authorize(self):
+        await self.auth.authorize()
 
     async def player_add_to_queue(self, uri: str, device=None):
         await self.http.player_add_to_queue(uri, device_id=get_id(device))
