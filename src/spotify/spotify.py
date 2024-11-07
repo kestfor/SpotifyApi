@@ -89,13 +89,6 @@ class AsyncSpotify:
         except asyncspotify.exceptions.NotFound:
             raise ConnectionError("there is no active device")
 
-    async def is_active(self):
-        try:
-            await self._session.player_currently_playing()
-            return True
-        except:
-            return False
-
     async def start_playlist(self, url: str):
         if not url.startswith("https://open.spotify.com/"):
             raise ValueError

@@ -38,11 +38,10 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
             data['created_at'] = created_at
             data["expires_at"] = created_at + datetime.timedelta(seconds=data["expires_in"])
 
-            async with session.begin():
-                new_auth = Auth(**data)
-                session.add(new_auth)
-                await session.flush()
-                new_auth.hash = hashlib.sha1(new_auth.id.to_bytes(8, "big")).hexdigest()
+            new_auth = Auth(**data)
+            session.add(new_auth)
+            await session.flush()
+            new_auth.hash = hashlib.sha1(new_auth.id.to_bytes(8, "big")).hexdigest()
 
             return RedirectResponse(f'{tg_redirect_url}{new_auth.hash}')
         else:
