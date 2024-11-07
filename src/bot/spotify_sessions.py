@@ -1,7 +1,7 @@
-from redis.exceptions import AuthorizationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.spotify.spotify import AsyncSpotify
+from src.spotify.spotify_errors import AuthorizationError
 from src.sql.models.user import User
 
 
