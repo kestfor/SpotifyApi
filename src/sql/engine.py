@@ -23,3 +23,9 @@ async def get_session():
     async with async_session() as session:
         async with session.begin():
             yield session
+
+
+async def get_session_for_auth():
+    async with async_session() as session:
+        async with session.begin():
+            yield session

@@ -9,7 +9,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.env import SPOTIFY_REDIRECT_URI, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
-from src.sql.engine import get_session
+from src.sql.engine import get_session_for_auth
 from src.sql.models.auth import Auth
 from src.sql.models.user import User
 
@@ -17,7 +17,7 @@ app = fastapi.FastAPI()
 
 
 @app.get("/callback")
-async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_session)]):
+async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_session_for_auth)]):
     tg_redirect_url = "https://t.me/SpotifyShareControlBot?start=_auth_"
 
     body = {
