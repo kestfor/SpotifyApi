@@ -6,7 +6,7 @@ from aiogram import Bot
 
 from src.env import BOT_TOKEN
 from src.refresh_service.refresh_functions import update_all_sessions
-from src.sql.engine import async_session, get_session
+from src.sql.engine import get_session
 
 REFRESH_TIMEOUT = 30
 
@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.DEBUG,
                         # logging.FileHandler("../../log.log", encoding="utf-8"),
                         logging.StreamHandler(sys.stdout)
                     ])
+
 
 async def main():
     token = BOT_TOKEN

@@ -60,6 +60,13 @@ class AsyncSpotify:
 
         self._users_queue: list[TrackInQueue] = []
 
+    async def __aenter__(self) -> 'AsyncSpotify':
+        await self.authorize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+
     @property
     def authorized(self) -> bool:
         return self._authorized

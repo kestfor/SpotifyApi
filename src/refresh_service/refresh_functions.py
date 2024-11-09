@@ -7,7 +7,6 @@ import aiogram
 from asyncspotify import FullTrack
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.bot.spotify_sessions import spotify_sessions
 from src.bot.utils.keyboards import get_admin_menu_keyboard, get_user_menu_keyboard
 from src.bot.utils.utils import get_volume_emoji
 from src.spotify.spotify import AsyncSpotify
@@ -67,28 +66,22 @@ async def update_session(music_session: Session, sql_session: AsyncSession, bot:
         logging.critical("master is not authorized")
         return
 
-    spotify: AsyncSpotify = AsyncSpotify(master.auth_id)
-    await spotify.authorize()
-    try:
+    async with AsyncSpotify(master.auth_id) as spotify:
         curr_track = await spotify.get_curr_track()
-    except Exception as error:
-        logging.error(error)
-        return
-    volume = spotify.volume
-    is_playing = spotify.is_playing
-    num_of_users = len(users)
+        volume = spotify.volume
+        is_playing = spotify.is_playing
+        num_of_users = len(users)
 
-    tasks = []
-    for users_part in get_part_of_users(users):
-        s = time.time()
-        for user in users_part:
-            tasks.append(asyncio.create_task(refresh(curr_track, volume, is_playing, num_of_users, user, bot)))
-        await asyncio.gather(*tasks)
-        time_left = time.time() - s
-        if time_left < TIME_OUT_SECONDS:
-            await asyncio.sleep(TIME_OUT_SECONDS - time_left)
-    await spotify.close()
-    logging.info(f"session {music_session.id} updated in {time.time() - start} seconds")
+        tasks = []
+        for users_part in get_part_of_users(users):
+            s = time.time()
+            for user in users_part:
+                tasks.append(asyncio.create_task(refresh(curr_track, volume, is_playing, num_of_users, user, bot)))
+            await asyncio.gather(*tasks)
+            time_left = time.time() - s
+            if time_left < TIME_OUT_SECONDS:
+                await asyncio.sleep(TIME_OUT_SECONDS - time_left)
+        logging.info(f"session {music_session.id} updated in {time.time() - start} seconds")
 
 
 async def update_all_sessions(sql_session: AsyncSession, bot: aiogram.Bot):
