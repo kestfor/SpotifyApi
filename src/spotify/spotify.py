@@ -78,7 +78,7 @@ class AsyncSpotify:
 
     @classmethod
     def create_authorize_route(cls) -> str:
-        return cls._auth.create_authorize_route()
+        return str(cls._auth.create_authorize_route())
 
     def deauthorize(self):
         self._authorized = False
