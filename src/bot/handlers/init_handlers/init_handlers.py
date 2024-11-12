@@ -19,7 +19,8 @@ async def default_start(message: Message):
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="начать сессию", callback_data='start_session'))
     builder.row(InlineKeyboardButton(text="присоединиться к сессии", callback_data='set_token'))
-    builder.row(InlineKeyboardButton(text='привязать spotify аккаунт', callback_data='connect_spotify_account'))
+    builder.row(InlineKeyboardButton(text='привязать spotify аккаунт',
+                                     url=AsyncSpotify.create_authorize_route()))
     await message.answer(text="Spotify 🎧", reply_markup=builder.as_markup())
 
 

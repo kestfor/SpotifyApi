@@ -66,6 +66,7 @@ class AsyncSpotify:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
+        return True
 
     @property
     def authorized(self) -> bool:
@@ -89,7 +90,7 @@ class AsyncSpotify:
         try:
             await self._session.authorize()
         except Exception as e:
-            raise AuthorizationError(f"can't authorize with storage_id {storage_id}") from e
+            raise AuthorizationError(f"can't authorize user with storage_id {self._auth.storage_id}") from e
         try:
             self._player = await SpotifyPlayer.get_player(self._session)
             if self._player is None:
