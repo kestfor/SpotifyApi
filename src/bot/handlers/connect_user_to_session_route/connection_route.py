@@ -26,7 +26,8 @@ async def add_user_to_session_handler(message: Message, state: FSMContext, user:
     try:
         token = int(token)
     except:
-        msg = await message.answer(text='введен неверный токен или сессия не начата')
+        msg = await message.answer(
+            text='введен неверный токен или сессия не начата, хотите начать новую сессию? \n/start')
         await message.delete()
         user.last_message_id = msg.message_id
         return
@@ -37,9 +38,9 @@ async def add_user_to_session_handler(message: Message, state: FSMContext, user:
         spotify = await spotify_sessions.get_or_create(user, session)
         await message.answer(text=await get_menu_text(spotify, user, session),
                              reply_markup=get_user_menu_keyboard(), parse_mode="HTML")
-        # await message.delete()
         await state.clear()
     else:
-        msg = await message.answer(text='введен неверный токен или сессия не начата')
+        msg = await message.answer(
+            text='введен неверный токен или сессия не начата, хотите начать новую сессию? \n/start')
         await message.delete()
         user.last_message_id = msg.message_id

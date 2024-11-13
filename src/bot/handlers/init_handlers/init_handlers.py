@@ -62,11 +62,21 @@ async def start_by_command(message: Message, command: CommandObject, state: FSMC
     await message.delete()
 
 
+@router.callback_query(F.data == "start_command")
+async def start_command_callback(callback: CallbackQuery, state: FSMContext, user: User,
+                                 session: AsyncSession):
+    await start_by_command(callback.message, CommandObject(), state, user, session)
+
+
 @router.callback_query(F.data == 'start_session')
 async def start_session(callback: CallbackQuery, user: User, session: AsyncSession):
     if not user.authorized:
-        await callback.message.edit_text(
-            f"Перейдите по ссылке для авторизации: {AsyncSpotify.create_authorize_route()}\n")
+        keyboard = InlineKeyboardBuilder()
+        keyboard.row(InlineKeyboardButton(text='привязать spotify аккаунт',
+                                          url=AsyncSpotify.create_authorize_route()))
+        keyboard.row(InlineKeyboardButton(text='назад', callback_data='start_command'))
+
+        await callback.message.edit_text("spotify аккаунт не привязан", reply_markup=keyboard.as_markup())
         return
 
     music_session = await user.create_session(session, str(user.user_id))
