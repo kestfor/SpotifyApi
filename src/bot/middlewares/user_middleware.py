@@ -45,5 +45,4 @@ class UserMiddleware(BaseMiddleware):
 
             data["user"] = user
             user.meta.screen = ScreenName.EMPTY
-
             return await handler(event, data)

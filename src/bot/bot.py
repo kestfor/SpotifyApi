@@ -10,6 +10,7 @@ from src.bot.handlers.init_handlers.init_handlers import router as init_router
 from src.bot.handlers.invites.view_invites import router as invites_router
 from src.bot.handlers.main_handlers.handlers import router as main_router
 from src.bot.middlewares.database_session_middleware import DatabaseMiddleware
+from src.bot.middlewares.retry_middleware import RetryMiddleware
 from src.bot.middlewares.session_member_middleware import SessionMemberMiddleware
 from src.bot.middlewares.user_middleware import UserMiddleware
 from src.env import BOT_TOKEN
@@ -27,6 +28,9 @@ async def main():
     token = BOT_TOKEN
     bot = Bot(token=token)
     dp = Dispatcher()
+
+    dp.message.middleware(RetryMiddleware(delay=2))
+    dp.callback_query.middleware(RetryMiddleware(delay=2))
 
     dp.message.middleware(DatabaseMiddleware(async_session))
     dp.callback_query.middleware(DatabaseMiddleware(async_session))
