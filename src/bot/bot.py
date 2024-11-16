@@ -29,8 +29,8 @@ async def main():
     bot = Bot(token=token)
     dp = Dispatcher()
 
-    dp.message.middleware(RetryMiddleware(delay=2))
-    dp.callback_query.middleware(RetryMiddleware(delay=2))
+    # dp.message.middleware(RetryMiddleware(delay=2))
+    # dp.callback_query.middleware(RetryMiddleware(delay=2))
 
     dp.message.middleware(DatabaseMiddleware(async_session))
     dp.callback_query.middleware(DatabaseMiddleware(async_session))
