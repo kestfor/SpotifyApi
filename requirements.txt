@@ -13,3 +13,4 @@ asyncmy
 uvicorn~=0.32.0
 aiohttp~=3.10.2
 pydantic~=2.4.0
+redis

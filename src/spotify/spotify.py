@@ -69,6 +69,10 @@ class AsyncSpotify:
         return True
 
     @property
+    def player(self) -> SpotifyPlayer:
+        return self._player
+
+    @property
     def authorized(self) -> bool:
         return self._authorized
 
