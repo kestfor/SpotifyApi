@@ -1,7 +1,8 @@
-import lyricsgenius
-from lyricsgenius.utils import clean_str
-from bs4 import BeautifulSoup
 import re
+
+import lyricsgenius
+from bs4 import BeautifulSoup
+from lyricsgenius.utils import clean_str
 
 
 class Genius(lyricsgenius.Genius):
@@ -22,7 +23,7 @@ class Genius(lyricsgenius.Genius):
             replace_default_terms (:obj:`list`, optional): if True, replaces default
                 excluded terms with user's. Default excluded terms are listed below.
             retries (:obj:`int`, optional): Number of retries in case of timeouts and
-                errors with a >= 500 response code. By default, requests are only made once.
+                errors with a >= 500 response src. By default, requests are only made once.
 
         Attributes:
             verbose (:obj:`bool`, optional): Turn printed messages on or off.
@@ -35,7 +36,7 @@ class Genius(lyricsgenius.Genius):
             replace_default_terms (:obj:`list`, optional): if True, replaces default
                 excluded terms with user's.
             retries (:obj:`int`, optional): Number of retries in case of timeouts and
-                errors with a >= 500 response code. By default, requests are only made once.
+                errors with a >= 500 response src. By default, requests are only made once.
 
         Returns:
             :class:`Genius`
@@ -179,4 +180,3 @@ class Genius(lyricsgenius.Genius):
     def search_song(self, title=None, artist="", song_id=None,
                     get_full_info=True):
         return super().search_song(title, artist, song_id, get_full_info)
-

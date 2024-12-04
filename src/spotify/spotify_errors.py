@@ -17,5 +17,10 @@ class ConnectionError(SpotifyErrors):
 class AuthorizationError(SpotifyErrors):
     pass
 
+
 class Forbidden(SpotifyErrors):
+    pass
+
+
+class UnsupportedDevice(SpotifyErrors):
     pass

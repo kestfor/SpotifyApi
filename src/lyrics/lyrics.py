@@ -1,7 +1,7 @@
 import asyncio
 import threading
 
-import lyrics_find_engine
+import src.lyrics.lyrics_find_engine as lyrics_find_engine
 
 
 class Lyrics:
@@ -45,6 +45,8 @@ class LyricsFinder:
     def _api_request(self, title, artist):
         try:
             self._found_res = self._genius_api.search_song(title=title, artist=artist, get_full_info=False)
+            if self._found_res is None:
+                self._found_res = ""
         except:
             self._found_res = ""
 
