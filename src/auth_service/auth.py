@@ -50,6 +50,7 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
                 print("error occured")
                 return RedirectResponse(tg_redirect_url)
         except Exception as e:
+            print(e)
             return Response("internal server error, try later", status_code=500)
 
 
