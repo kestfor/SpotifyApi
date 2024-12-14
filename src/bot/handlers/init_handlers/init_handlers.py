@@ -22,7 +22,7 @@ async def default_start(message: Message, user):
     builder.row(InlineKeyboardButton(text='привязать spotify аккаунт',
                                      url=AsyncSpotify.create_authorize_route()))
     msg = await message.answer(text="Spotify 🎧", reply_markup=builder.as_markup())
-    user.last_message_id = message.message_id
+    user.last_message_id = msg.message_id
 
 
 async def admin_start(message: Message, user: User):
