@@ -15,13 +15,14 @@ from src.sql.models.user import User
 router = Router()
 
 
-async def default_start(message: Message):
+async def default_start(message: Message, user):
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="начать сессию", callback_data='start_session'))
     builder.row(InlineKeyboardButton(text="присоединиться к сессии", callback_data='set_token'))
     builder.row(InlineKeyboardButton(text='привязать spotify аккаунт',
                                      url=AsyncSpotify.create_authorize_route()))
-    await message.answer(text="Spotify 🎧", reply_markup=builder.as_markup())
+    msg = await message.answer(text="Spotify 🎧", reply_markup=builder.as_markup())
+    user.last_message_id = message.message_id
 
 
 async def admin_start(message: Message, user: User):
@@ -48,7 +49,8 @@ async def start_by_command(message: Message, command: CommandObject, state: FSMC
         case StartArg.Type.TOKEN | StartArg.Type.EMPTY:
             token = start_arg.value
             if token is None or token == '':
-                await default_start(message)
+
+                await default_start(message, user)
             else:
                 await add_user_to_session_handler(message, state, user, session, token)
         case StartArg.Type.AUTH:
@@ -75,7 +77,6 @@ async def start_session(callback: CallbackQuery, user: User, session: AsyncSessi
         keyboard.row(InlineKeyboardButton(text='привязать spotify аккаунт',
                                           url=AsyncSpotify.create_authorize_route()))
         keyboard.row(InlineKeyboardButton(text='назад', callback_data='start_command'))
-
         await callback.message.edit_text("spotify аккаунт не привязан", reply_markup=keyboard.as_markup())
         return
 
