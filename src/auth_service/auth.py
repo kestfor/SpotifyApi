@@ -1,7 +1,6 @@
 import datetime
 import hashlib
 from typing import Annotated
-
 import fastapi
 import uvicorn
 from aiohttp import ClientSession
@@ -12,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.env import SPOTIFY_REDIRECT_URI, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 from src.sql.engine import get_session_for_auth
 from src.sql.models.auth import Auth
+from src.sql.models.user import User
 
 app = fastapi.FastAPI()
 
@@ -50,9 +50,10 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
                 print("error occured")
                 return RedirectResponse(tg_redirect_url)
         except Exception as e:
-            print(e)
-            return Response("internal server error, try later", status_code=500)
+            return Response("internal server error", status_code=500)
 
 
 if __name__ == "__main__":
     uvicorn.run(app, host='0.0.0.0', port=80)
+
+
