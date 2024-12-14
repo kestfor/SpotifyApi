@@ -1,17 +1,17 @@
 import datetime
 import hashlib
 from typing import Annotated
+
 import fastapi
 import uvicorn
 from aiohttp import ClientSession
 from fastapi import Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.env import SPOTIFY_REDIRECT_URI, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 from src.sql.engine import get_session_for_auth
 from src.sql.models.auth import Auth
-from src.sql.models.user import User
 
 app = fastapi.FastAPI()
 
@@ -29,28 +29,29 @@ async def auth_callback(code: str, session: Annotated[AsyncSession, Depends(get_
     }
 
     async with ClientSession() as client_session:
-        response = await client_session.post("https://accounts.spotify.com/api/token", data=body)
+        try:
+            response = await client_session.post("https://accounts.spotify.com/api/token", data=body)
 
-        if response.status == 200:
-            data = await response.json()
-            created_at = datetime.datetime.now(datetime.timezone.utc)
+            if response.status == 200:
+                data = await response.json()
+                created_at = datetime.datetime.now(datetime.timezone.utc)
 
-            data['created_at'] = created_at
-            data["expires_at"] = created_at + datetime.timedelta(seconds=data["expires_in"])
+                data['created_at'] = created_at
+                data["expires_at"] = created_at + datetime.timedelta(seconds=data["expires_in"])
 
-            new_auth = Auth(**data)
-            session.add(new_auth)
-            await session.flush()
-            new_auth.hash = hashlib.sha1(new_auth.id.to_bytes(8, "big")).hexdigest()
+                new_auth = Auth(**data)
+                session.add(new_auth)
+                await session.flush()
+                new_auth.hash = hashlib.sha1(new_auth.id.to_bytes(8, "big")).hexdigest()
 
-            return RedirectResponse(f'{tg_redirect_url}{new_auth.hash}')
-        else:
-            print(response.status, response.reason)
-            print("error occured")
-            return RedirectResponse(tg_redirect_url)
+                return RedirectResponse(f'{tg_redirect_url}{new_auth.hash}')
+            else:
+                print(response.status, response.reason)
+                print("error occured")
+                return RedirectResponse(tg_redirect_url)
+        except Exception as e:
+            return Response("internal server error, try later", status_code=500)
 
 
 if __name__ == "__main__":
     uvicorn.run(app, host='0.0.0.0', port=80)
-
-
