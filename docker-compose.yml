@@ -32,7 +32,6 @@ services:
 
   mysqldb:
     image: mysql:latest
-    restart: always
     environment:
       - MYSQL_DATABASE='share_music'
       - MYSQL_USER=&{DB_USERNAME}
