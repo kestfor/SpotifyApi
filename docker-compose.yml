@@ -42,7 +42,7 @@ services:
     expose:
       - '3306'
     volumes:
-      - my-db:/var/lib/mysql
+      - ./docker_volumes/mysql-data:/data
 
   redis:
     image: redis:latest
