@@ -30,6 +30,20 @@ services:
              cd ./src/refresh_service
              python service.py"
 
+  mysqldb:
+    image: mysql:latest
+    restart: always
+    environment:
+      - MYSQL_DATABASE='share_music'
+      - MYSQL_USER=&{DB_USERNAME}
+      - MYSQL_PASSWORD=&{DB_PASSWORD}
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - my-db:/var/lib/mysql
+
   redis:
     image: redis:latest
     container_name: redis_container
