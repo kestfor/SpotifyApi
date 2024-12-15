@@ -30,6 +30,24 @@ services:
              cd ./src/refresh_service
              python service.py"
 
+  mysqldb:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: 'share_music'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}" ]
+      retries: 3
+      timeout: 5s
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./docker_volumes/mysql-data:/data
+
   redis:
     image: redis:latest
     container_name: redis_container
