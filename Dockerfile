@@ -4,4 +4,5 @@ EXPOSE 80
 RUN pip install --upgrade --prefer-binary --no-cache-dir -r requirements.txt
 WORKDIR /bots/SpotifyBot
 ENV PYTHONPATH="${PYTHONPATH}:/bots/SpotifyBot"
+COPY ./sql_init_scripts/ /docker-entrypoint-initdb.d/
 COPY . .
